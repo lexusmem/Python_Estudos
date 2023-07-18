@@ -8,7 +8,8 @@
 # Considere que a cobertura da tinta é de 1 litro para cada 3 metros quadrados
 # Tinta vendida em latas de 18 litros
 # Cada lata custa R$ 80
-# Informar quantidade de latas de tintas a serem compradas, quantidade de sobra e o preço total
+# Informar quantidade de latas de tintas a serem compradas, quantidade de
+# sobra e o preço total
 
 altura = float(input('Informe a altura: '))
 largura = float(input('Informe a largura: '))

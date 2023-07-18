@@ -9,6 +9,9 @@ while True:
     if numero_usuario.capitalize() == 'S':
         print('Sair.')
         break
+    elif not numero_usuario.isnumeric():
+        print('Valor Inválido. Digite um número.')
+        continue
     elif int(numero_usuario) == numero_secreto:
         print('Você acertou!')
         break
