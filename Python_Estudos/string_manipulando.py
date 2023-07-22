@@ -25,6 +25,9 @@ print(novo_texto)
 novo_texto = texto[-1:]
 print(novo_texto)
 
+# funções build-in upper (maiúscula) do Python para strings
+print(texto.upper())
+
 # funções build-in do Python para strings
 print(type(texto))
 print(dir(texto))
