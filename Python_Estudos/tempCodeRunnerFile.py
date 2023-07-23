@@ -1,3 +1,4 @@
-for valor in lista1:
-    print(f'A palavra "{valor.upper()}" aparece {lista1.count(valor.lower())}'
-          'x na frase.')
+except NameError:
+#     print('Variável não declarada.')
+# except Exception as erro:
+#     print('Erro inesperado.', erro)
