@@ -1,3 +1,5 @@
+# https://youtu.be/SJsg5Y6c7_A
+
 def main():
     n = int(input('Digite o valor de n!: '))
     resp = fatorial(n)
