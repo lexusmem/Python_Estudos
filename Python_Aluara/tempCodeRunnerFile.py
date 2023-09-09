@@ -1,0 +1,2 @@
+            print('Você perdeu!')
+            continue

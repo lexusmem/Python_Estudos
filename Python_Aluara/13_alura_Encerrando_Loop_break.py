@@ -5,18 +5,39 @@ print('==================================')
 numero_secreto = 33
 tentativas = 3
 
-while True:
+for n in range(1, tentativas + 1):
 
-    numero_usuario = input('Digite o número secreto: ')
+    numero_usuario = input('Digite o número secreto entre 1 e 100: ')
 
     sair = numero_usuario.capitalize() == 'S'
 
     if sair:
         print('Sair.')
-        break
 
     if not numero_usuario.isnumeric():
-        print('Valor Inválido. Digite um número.')
+        if n > 2:
+            print('Você perdeu!')
+            continue
+        if n >= 2:
+            print('Valor Inválido. Digite um número.')
+            print('Última tentativas!\n')
+        else:
+            print('Valor Inválido. Digite um número.')
+            print(f'Você possuí {n + 1} tentativas.\n')
+
+        continue
+
+    if int(numero_usuario) < 1 or int(numero_usuario) > 100:
+        if n > 2:
+            print('Você perdeu!')
+            continue
+        if n == 2:
+            print("Digite um número entre 1 e 100.")
+            print('Última tentativas!\n')
+        else:
+            print("Digite um número entre 1 e 100.")
+            print(f'Você possuí {n + 1} tentativas.\n')
+
         continue
 
     acertou = int(numero_usuario) == numero_secreto
@@ -28,8 +49,7 @@ while True:
               '====Fim de Jogo====')
         break
     else:
-        tentativas -= 1
-        if tentativas <= 0:
+        if n == 3:
             print('Você perdeu!')
             break
 
@@ -42,7 +62,7 @@ while True:
                   ' secreto. Tente novamente.')
             print('Para sair digite "S".')
 
-        if tentativas == 1:
-            print('Última tentativas!')
+        if n == 2:
+            print('Última tentativas!\n')
         else:
-            print(f'Você possuí {tentativas} tentativas.')
+            print(f'Você possuí {n + 1} tentativas.\n')
