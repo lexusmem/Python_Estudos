@@ -17,11 +17,12 @@ def jogar():
 
     # While - Enquanto
     while not enforcou and not acertou:
-        chute = input('Digite uma letra: ')
-        chute = chute.strip()
+
+        chute = pede_chute()
 
         index = 0
         palavra_nao = 0
+
         for letra in palavra_secreta:
             if chute.upper() == letra.upper():
                 letras_acertadas[index] = chute
@@ -71,6 +72,12 @@ def carrega_palavras_secretas():
 
 def inicializa_letras_acertadas(palavra):
     return ['_' for letra in palavra]
+
+
+def pede_chute():
+    chute = input('Digite uma letra: ')
+    chute = chute.strip()
+    return chute
 
 
 if (__name__ == "__main__"):

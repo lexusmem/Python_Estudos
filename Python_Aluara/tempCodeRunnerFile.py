@@ -1,4 +1,1 @@
-            if "-" in palavra_secreta:
-                continue
-            else:
-                print("Você Acertou a Palavra Secreta!")
+print(f'A letra "{chute}" digitada não encontrada na Forca.')
