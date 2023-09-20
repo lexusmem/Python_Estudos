@@ -1,1 +1,1 @@
-print(f'A letra "{chute}" digitada não encontrada na Forca.')
+print(conta_1.__titular)

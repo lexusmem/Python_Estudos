@@ -17,14 +17,39 @@ ou como um elemento abstrato, como uma conta bancária.
 
 
 class Conta:
-    # Função __init__ Função construtura
+    # Função __init__ Função construtura Classe
     # Dentro do Init construo os atributos
     # defino as características do objeto
+    # E crio os métodos/funções da minha classe
     # Self é a referencia de construção do objeto.
     def __init__(self, numero, titular, saldo, limite):
         print(f"Construindo Objeto...{self}")
         # Atributos:
-        self.numero = numero
-        self.titular = titular
-        self.saldo = saldo
-        self.limite = limite
+        # Atributos Privados "__":
+        self.__numero = numero
+        self.__titular = titular
+        self.__saldo = saldo
+        self.__limite = limite
+
+    # Métodos - Criação de métodos/funções que consta no objeto:
+    def extrato(self):
+        print(
+            f'Saldo de {self.__saldo:.2f} na conta do '
+            f'titular {self.__titular}.')
+
+    def deposita(self, valor):
+        self.__saldo += valor
+        print(f'Deposito de {valor:.2f} na conta do titular {self.__titular}.')
+
+    def sacar(self, valor):
+        self.__saldo -= valor
+        print(f'Saque de -{valor:.2f} na conta do titular {self.__titular}.')
+
+    def transferencia(self, valor, destino):
+        self.sacar(valor)
+        destino.deposita(valor)
+
+# Para criação de atributos privados
+# Inserir "__" na frente do atributo
+# Com isso não pode ser mais acessado diretamente
+# somente através do métodos
