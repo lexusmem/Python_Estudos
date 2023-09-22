@@ -22,6 +22,10 @@ conta_2.extrato()
 print(f'O limite da conta n° {conta_1.numero} é de {conta_1.limite:.2f}')
 conta_1.limite = 2000
 
+conta_1.extrato()
+conta_1.sacar(5000)
+conta_1.extrato()
+
 # Acessando atributos dentro de um objeto
 # Como os atributos estão privados não é possível acessar direto
 # Somente através do métodos.

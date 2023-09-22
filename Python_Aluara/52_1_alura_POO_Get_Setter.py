@@ -19,9 +19,6 @@ conta_1.transferencia(valor, conta_2)
 conta_1.extrato()
 conta_2.extrato()
 
-print(f'O limite da conta n° {conta_1.numero} é de {conta_1.limite:.2f}')
-conta_1.limite = 2000
-
 # Acessando atributos dentro de um objeto
 # Como os atributos estão privados não é possível acessar direto
 # Somente através do métodos.
@@ -76,7 +73,3 @@ conta_1.limite = 2000
 # Para De-Referencia esta nova_variável é somente
 # atribuir a ela None
 # nova_variável = None
-
-# Decoradores
-# @property - substitui os get nos métodos
-# @xxx.setter - substitui os set nos métodos
