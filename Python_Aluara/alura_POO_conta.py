@@ -41,6 +41,7 @@ class Conta:
         self.__saldo += valor
         print(f'Deposito de {valor:.2f} na conta do titular {self.titular}.')
 
+    # __ Método privado.
     def __pode_sacar(self, valor_a_sacar):
         valor_disponivel_a_sacar = self.__saldo + self.__limite
         return valor_a_sacar <= valor_disponivel_a_sacar
@@ -52,7 +53,7 @@ class Conta:
         else:
             print(
                 f'O valor de saque ultrapassa o seu limite atual de '
-                f'{self.saldo + self.limite:.2f}')
+                f'{self.__saldo + self.__limite:.2f}')
 
     def transferencia(self, valor, destino):
         self.sacar(valor)
@@ -61,30 +62,38 @@ class Conta:
             f'Transferência realizada R$ {valor} de {self.titular} para '
             f'{destino.titular}.')
 
-    @property
+    @property  # Get
     def saldo(self):
         return self.__saldo
 
-    @property
+    @property  # Get
     def titular(self):
         return self.__titular
 
-    @property
+    @property  # Get
     def limite(self):
         return self.__limite
 
-    @limite.setter
+    @limite.setter  # Set
     def limite(self, limite):
         self.__limite = limite
         print(
-            f'Atribuído novo limite de {self.limite:.2f} a conta '
-            f'{self.numero}.')
+            f'Atribuído novo limite de {self.__limite:.2f} a conta '
+            f'{self.__numero}.')
 
-    @property
+    @property  # Get
     def numero(self):
         return self.__numero
 
+    @staticmethod  # Método estático (da classe)
+    def codigo_banco():
+        return "033"
+
+    @staticmethod  # Método estático (da classe)
+    def codigos_bancos():
+        return {'BB': '003', 'Caixa': '104', 'Bradesco': '237'}
+
 # Para criação de atributos privados
-# Inserir "__" na frente do atributo
+# Inserir "__" na frente do atributo ou métodos
 # Com isso não pode ser mais acessado diretamente
 # somente através do métodos

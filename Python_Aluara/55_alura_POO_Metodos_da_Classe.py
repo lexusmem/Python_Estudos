@@ -26,6 +26,14 @@ conta_1.extrato()
 conta_1.sacar(5000)
 conta_1.extrato()
 
+print(Conta.codigo_banco())
+bancos = (Conta.codigos_bancos())
+print(bancos)
+print(bancos['BB'])
+print(bancos['Caixa'])
+print(min(bancos.keys()), bancos['Bradesco'], list(bancos.keys())[0])
+
+
 # Acessando atributos dentro de um objeto
 # Como os atributos estão privados não é possível acessar direto
 # Somente através do métodos.
@@ -90,3 +98,10 @@ conta_1.extrato()
 # Decoradores
 # @property - substitui os get nos métodos
 # @xxx.setter - substitui os set nos métodos
+
+# Métodos da Classe
+# Chamados de métodos estáticos.
+# Métodos que retornam um valor independente de existir
+# Um objeto instanciado.
+# Utilizar o decorador no método:
+# @staticmethod
