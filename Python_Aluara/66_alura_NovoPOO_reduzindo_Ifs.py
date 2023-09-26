@@ -39,11 +39,20 @@ class Programa:
     def dar_likes(self):
         self._likes += 1
 
+    def __str__(self):
+        return f'Nome: {self._nome} - Ano: {self.ano} - {self._likes} Likes'
+
 
 class Filme(Programa):
     def __init__(self, nome, ano, duracao):
         super().__init__(nome, ano)
         self.duracao = duracao
+
+    # É possível criar métodos exclusivos para as classes filhos
+    # Exemplo:
+    def __str__(self):
+        return f'Nome: {self._nome} - Ano: {self.ano} - Duração: '\
+            f'{self.duracao} min. - {self._likes} Likes'
 
 
 class Series(Programa):
@@ -51,18 +60,21 @@ class Series(Programa):
         super().__init__(nome, ano)
         self.temporadas = temporadas
 
+    def __str__(self):
+        return f'Nome: {self._nome} - Ano: {self.ano} '\
+            f'Temporadas: {self.temporadas} - {self._likes} Likes'
 
+
+# Instanciando as classes
 vingadores = Filme('vingadores - guerra infinita', 2018, 160)
-vingadores.dar_likes()
-vingadores.dar_likes()
-vingadores.dar_likes()
-
-print(f'Nome: {vingadores.nome}, Ano: {vingadores.ano}, '
-      f'Duração: {vingadores.duracao}, Likes: {vingadores.likes}.')
-
 atlanta = Series('atlanta', 2018, 2)
-atlanta.dar_likes()
+
+vingadores.dar_likes()
 atlanta.dar_likes()
 
-print(f'Nome: {atlanta.nome}, Ano: {atlanta.ano}, '
-      f'Temporadas: {atlanta.temporadas}, Likes: {atlanta.likes}')
+# ↓↓↓↓↓↓↓ Polimorfismo ↓↓↓↓↓↓↓
+
+filmes_e_series = [vingadores, atlanta]
+
+for programa in filmes_e_series:
+    print(programa)

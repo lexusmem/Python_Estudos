@@ -45,6 +45,11 @@ class Filme(Programa):
         super().__init__(nome, ano)
         self.duracao = duracao
 
+    # É possível criar métodos exclusivos para as classes filhos
+    # Exemplo:
+    def exemplo_metodo_exclusivo(self):
+        pass
+
 
 class Series(Programa):
     def __init__(self, nome, ano, temporadas):
@@ -52,17 +57,15 @@ class Series(Programa):
         self.temporadas = temporadas
 
 
+# Instanciando as classes
 vingadores = Filme('vingadores - guerra infinita', 2018, 160)
+atlanta = Series('atlanta', 2018, 2)
+
 vingadores.dar_likes()
-vingadores.dar_likes()
-vingadores.dar_likes()
+atlanta.dar_likes()
 
 print(f'Nome: {vingadores.nome}, Ano: {vingadores.ano}, '
-      f'Duração: {vingadores.duracao}, Likes: {vingadores.likes}.')
-
-atlanta = Series('atlanta', 2018, 2)
-atlanta.dar_likes()
-atlanta.dar_likes()
+      f'Duração: {vingadores.duracao} min., Likes: {vingadores.likes}.')
 
 print(f'Nome: {atlanta.nome}, Ano: {atlanta.ano}, '
       f'Temporadas: {atlanta.temporadas}, Likes: {atlanta.likes}')
