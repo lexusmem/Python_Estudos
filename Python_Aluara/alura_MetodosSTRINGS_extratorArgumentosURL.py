@@ -13,3 +13,24 @@ class ExtratorArgumentosURL:
             return True
         else:
             return False
+
+    def extraiArgumentos(self):
+
+        buscaMoedaOrigem = "moedaorigem"
+        buscaMoedaDestino = 'moedadestino'
+
+        indiceInicialDestino = self.encontraIndiceInicial(buscaMoedaDestino)
+        indiceFinalDestino = self.encontraIndiceFinal(indiceInicialDestino)
+
+        indiceInicialOrigem = self.encontraIndiceInicial(buscaMoedaOrigem)
+        indiceFinalOrigem = self.encontraIndiceFinal(indiceInicialOrigem)
+
+        moedaOrigem = self.url[indiceInicialOrigem:indiceFinalOrigem]
+        moedaDestino = self.url[indiceInicialDestino:indiceFinalDestino]
+        return moedaOrigem, moedaDestino
+
+    def encontraIndiceInicial(self, moedaBuscada):
+        return self.url.find(moedaBuscada) + len(moedaBuscada) + 1
+
+    def encontraIndiceFinal(self, indiceInicial):
+        return self.url.find("&", indiceInicial)
