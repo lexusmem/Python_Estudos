@@ -1,1 +1,1 @@
-idade3
+import numpay as nu

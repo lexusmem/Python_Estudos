@@ -11,25 +11,27 @@ print(type(alex))
 print(pamela)
 print(type(pamela))
 
+
 # variação 'funcional' (separando o comportamento dos dados)
-
-conta_gui = (15, 1000)
-print(conta_gui)
-
 # tupla não é possível adicionar elementos e nem alterar.
-# conta_gui.append(10)
-# conta_gui[1] = 1100
-
-
-def deposita(conta):
-    novo_saldo = conta[1] + 100
-    codigo = conta[0]
-    print(f'Deposito de R$ 100')
-    return (codigo, novo_saldo)
+# alex.append(10)
+# alex[3] = 1100
+def deposita(conta, valor):
+    nome = conta[0]
+    idade = conta[1]
+    ano = conta[2]
+    novo_saldo = conta[3] + valor
+    print('Deposito de R$ 100')
+    return (nome, idade, ano, novo_saldo)
 
 
 # para alterar devo atribuir novo valor da tupla
-deposita(conta_gui)
-print(conta_gui)
-conta_gui = deposita(conta_gui)
-print(conta_gui)
+deposita(alex, 200)
+print(alex)
+alex = deposita(alex, 300)
+print(alex)
+
+deposita(pamela, 200)
+print(alex)
+alex = deposita(alex, 500)
+print(alex)
