@@ -1,1 +1,1 @@
-import numpay as nu
+print(assistiram)
