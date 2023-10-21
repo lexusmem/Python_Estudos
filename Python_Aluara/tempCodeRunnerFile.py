@@ -1,1 +1,1 @@
-print(assistiram)
+telefones["alex"]
