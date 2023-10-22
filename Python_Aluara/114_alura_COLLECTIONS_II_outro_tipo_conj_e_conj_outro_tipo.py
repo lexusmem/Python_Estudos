@@ -11,9 +11,9 @@ print(usuarios)
 print(len(usuarios))
 
 # para congelar a lista para não incluir mais dados:
-usuarios = frozenset(usuarios)
+# usuarios = frozenset()
 # usuarios.add(345)
-print(usuarios)
+# print(usuarios)
 
 meu_texto = 'Bem vindo meu nome é Alex gosto muito de nome e tenho '\
             'muito cachorro Alex.'
