@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class DatasBr:
@@ -25,8 +25,13 @@ class DatasBr:
             "Sábado", "Domingo"
         ]
         dia_semana = self.momento_cadastro.weekday()
-        return dias_semana[dia_semana - 1]
+        return dias_semana[dia_semana]
 
     def format_data(self):
         data_formata = self.momento_cadastro.strftime("%d/%m/%Y %H:%M")
         return data_formata
+
+    def tempo_cadastro(self):
+        tempo_cadastro = (datetime.today() + timedelta(days=300,
+                          hours=14)) - self.momento_cadastro
+        return tempo_cadastro
