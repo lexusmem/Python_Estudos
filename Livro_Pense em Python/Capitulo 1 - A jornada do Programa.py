@@ -30,8 +30,8 @@ numero = 1
 print(type(numero))
 ponto_flutuante = 42.0
 print(type(ponto_flutuante))
-letras = ('Hello, World!')
-print(type(letras))
+strings = ('Hello, World!')
+print(type(strings))
 
 # O resultado dos tipos de cada variável é informada pelo tipo da sua "class".
 
