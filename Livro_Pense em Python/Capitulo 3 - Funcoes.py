@@ -1,5 +1,4 @@
 import math
-import signal
 # Funções
 # Funções são sequencias nomeadas de instruções que executa
 # uma operação de computação. Ao definir uma função, você
@@ -28,9 +27,10 @@ print(float('32.2514'))
 # import math
 
 print(math)
+# print(help(math))
 
 # o módulo possui funções e variáveis definidas no módulo.
-# para acessa pe preciso especificar o nome do módulo e o
+# para acessa é preciso especificar o nome do módulo e o
 # nome da função separados po ponto que é chamado de notação
 # por ponto.
 
@@ -77,4 +77,97 @@ print(minutes)
 
 # hours * 60 = minute - ERRO
 
-# parei no item 3.4
+# como acrescentar novas funções
+# É possível acrescentar novas funções em python.
+# Uma definição de função especifica o nome de uma
+# nova função e a sequência de instruções que são
+# executadas quando a função é chamada
+
+
+# exemplo:
+
+# primeira linha chama-se cabeçalho (definição de função)
+def print_lyrics():
+    # E o corpo da função (com instruções)
+    '''
+    Função:\n
+    Teste para impressão de texto na tela.
+    \n
+    Argumento:\n
+    Não possuí.
+    '''
+    print("I'm a lumberjack, and I'm okay")
+    print("I sleep all night and I work all day")
+
+# def é uma palavra reservada que indica uma definição de função.
+# O nome da função é "print_lyrics" que possui regra de nomeação
+# as mesmas das variáveis
+# os parênteses vazio indicam que esta função não possui argumentos.
+
+
+print_lyrics()
+
+# uma função pode ser atribuída a uma variável
+# alex = print_lyrics()
+
+
+# uma função pode ser utilizada dentro de outra função
+def repeat_lyrics():
+    print_lyrics()
+    print_lyrics()
+
+
+repeat_lyrics()
+
+# A definição de uma função cria um objeto de função
+# que tem o tipo function:
+print(print_lyrics)
+
+
+# Podemos saber qual o seu tipo classe
+print(type(print_lyrics))
+
+
+# Uso de definições
+
+# as funções acima possuem duas definições de funções:
+# print_lyrics e repeat_lyrics
+# as definições de função tem o objetivo de criar
+# um objeto chamado função (function)
+# e as instruções não são executadas até que a função seja chamada.
+# Não é possível chamar a função antes de cria-lá
+
+# Fluxo de execução.
+
+# A execução sempre começa na primeira instrução do programa.
+# As instruções são executadas uma após a outra de cima para baixo.
+
+# Uma chamada de função é como se um desvio no fluxo da execução.
+# Ao invés de ir à próxima instrução o fluxo salta para o corpo da função.
+
+# Parâmetros e Argumentos
+
+# Algumas funções exigem argumentos.
+# Dentro da função, os argumentos são atribuídos a
+# variáveis chamadas parâmetros.
+
+def print_alex(alex):
+    print(alex)
+    print(alex)
+
+# esta função atribui o argumento a um parâmetro chamado alex.
+# Quando a função é chamada, ele exibe o valor do parâmetro 2x.
+
+# esta função funciona com qualquer valor que possa ser exibido.
+# Você pode até usar uma variável como argumento.
+
+
+alex = 'ALEX'
+print_alex(alex)
+print_alex(42)
+print_alex('teste nome alex')
+print_alex(type(alex))
+print_alex('teste nome alex' * 4)
+print_alex(math.cos(math.pi))
+
+# Pare 3.8 as Variáveis e os parâmetros são locais.
