@@ -155,6 +155,7 @@ def print_alex(alex):
     print(alex)
     print(alex)
 
+
 # esta função atribui o argumento a um parâmetro chamado alex.
 # Quando a função é chamada, ele exibe o valor do parâmetro 2x.
 
@@ -170,4 +171,45 @@ print_alex(type(alex))
 print_alex('teste nome alex' * 4)
 print_alex(math.cos(math.pi))
 
-# Pare 3.8 as Variáveis e os parâmetros são locais.
+# As Variáveis e os parâmetros são locais.
+
+# uma variável dentro de uma função é local, ela só existe dentro da função.
+
+
+def cat_twice(part1, part2):
+    cat = part1 + part2
+    print_alex(cat)
+
+
+line1 = 'teste função '
+line2 = 'teste função'
+cat_twice(line1, line2)
+
+# Quando a função é encerrada a variável cat é destruída.
+
+# Ao tentar acessar a variável retornará erro:
+# print(cat)
+# NameError: name 'cat' is not defined
+
+# Diagrama de pilhas
+
+# diagrama de pilha é o desenho onde cada função é representada por um quadro
+# (frame)e que cada frame possui as variáveis que pertence a cada função.
+
+# Exemplo:
+
+# __main__  ____________________________
+#          | Line1----> 'teste função ' |
+#          | Line2----> 'teste função'  |
+#          | ___________________________|
+
+# cat_twice _____________________________________
+#          | part1----> 'teste função '          |
+#          | part2----> 'teste função'           |
+#          | cat---> 'teste função teste função' |
+#          | ____________________________________|
+
+# os frames são organizados em uma pilha para indicar
+# qual função chamou a outra, no exemplo o cat_twice foi chamado por __main__
+
+# PAREI - Funções com resultado e funções nulas
