@@ -1,4 +1,5 @@
 import math
+from unittest import result
 # Funções
 # Funções são sequencias nomeadas de instruções que executa
 # uma operação de computação. Ao definir uma função, você
@@ -212,4 +213,38 @@ cat_twice(line1, line2)
 # os frames são organizados em uma pilha para indicar
 # qual função chamou a outra, no exemplo o cat_twice foi chamado por __main__
 
-# PAREI - Funções com resultado e funções nulas
+# Funções com resultado e funções nulas.
+
+# quando vc chama uma função com resultado quase sempre você quer fazer algo
+# com o resultado você pode atribuir a uma variável ou usá-la como parte de
+# uma expressão.
+
+x = math.cos(radians)
+golden = (math.sqrt(5) + 1) / 2
+
+# quando chama afunção no modo interativo, o python exibe o resultado:
+# >>>> math.sqrt(5)
+# 2.2360679774997898
+
+# mas em modo script o valor de retorno é perdido.
+# math.sqrt(5)
+# este script calcula a raiz quadrada e mais nada.
+
+# as funções nulas podem exibir algo na tela ou ter algum outro efeito,
+# porém não tem valor de retorno.
+
+result = print_alex('Alex')
+
+print(result)
+
+
+# o valor 'None' é um valor especial que tem seu próprio tipo:
+
+print(type(None))
+
+# DEPURAÇÃO
+
+# A depuração, também conhecida como "debugging", é o processo de encontrar
+# e corrigir erros em um programa de computador. É um passo crucial no
+# desenvolvimento de software para garantir que o programa funcione como
+# esperado e atenda às suas necessidades.
