@@ -37,8 +37,23 @@ bob2.lt(90)
 bob2.pd()
 bob2.fd(100)
 
+# 4.2 Repetição Simples
+# Conforme escrita acima trata-se de uma repetição simples.
+# podemos faser algo mais conciso com uma instrução for.
+
+for i in range(4):
+    print('Hello!')
+
+# aqui está uma instrução for que desenha um quadrado
+
+bob3 = turtle.Turtle()
+
+for i in range(4):
+    bob3.fd(50)
+    bob3.lt(90)
+
+# Uma instrução for também é chamada de loop.
+
 # mainloop diz que a janela deve esperar o usuário fechar a janela.
 # Deve fica no fim do código.
 turtle.mainloop()
-
-# Parei - 4.2 Repetição Simples
