@@ -56,4 +56,5 @@ for i in range(4):
 
 # mainloop diz que a janela deve esperar o usuário fechar a janela.
 # Deve fica no fim do código.
+
 turtle.mainloop()
