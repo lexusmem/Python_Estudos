@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4">Gerenciar Status</h2>
+
+<!-- Formulário para adicionar novo status -->
+<div class="card p-4 mb-4 shadow-sm">
+    <h3 class="h5">Adicionar Novo Status</h3>
+    <form method="POST" class="d-flex gap-2">
+        <input type="hidden" name="acao" value="inserir">
+        <input type="text" class="form-control" name="novo_status" placeholder="Digite o novo status" required>
+        <button type="submit" class="btn btn-success">Adicionar</button>
+    </form>
+</div>
+
+<!-- Lista de status existentes -->
+<div class="card p-4 shadow-sm">
+    <h3 class="h5 mb-3">Status Existentes</h3>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status in status_opcoes %}
+                <tr>
+                    <td>{{ status[0] }}</td>
+                    <td>{{ status[1] }}</td>
+                    <td>
+                        <form method="POST" class="d-flex gap-2">
+                            <input type="hidden" name="acao" value="alterar">
+                            <input type="hidden" name="status_id" value="{{ status[0] }}">
+                            <input type="text" class="form-control" name="novo_nome" value="{{ status[1] }}" required>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Alterar</button>
+                        </form>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="acao" value="excluir">
+                            <input type="hidden" name="status_id" value="{{ status[0] }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Tem certeza que deseja excluir?');">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

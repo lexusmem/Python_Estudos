@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4">Lista de Salvados</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Sinistro</th>
+                <th>Placa</th>
+                <th>Modelo</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for salvado in salvados %}
+            <tr>
+                <td>{{ salvado[0] }}</td>
+                <td>{{ salvado[1] }}</td>
+                <td>{{ salvado[2] }}</td>
+                <td>{{ salvado[3] }}</td>
+                <td><span class="badge bg-{{ 'success' if salvado[4] == 'Vendido' else 'primary' }}">{{ salvado[4]
+                        }}</span></td>
+                <td>
+                    <a href="{{ url_for('atualizar', id=salvado[0]) }}"
+                        class="btn btn-sm btn-outline-primary">Atualizar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
