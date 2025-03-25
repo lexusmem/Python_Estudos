@@ -1,0 +1,64 @@
+o nosso codigo esta ficando bagunçado, tem ser aplicado orientação a objeto para melhorar?
+a pagina inicial consta com a lista de salvados e deve conter os campos na listagem ID/Sinistro/Placa/Marca/Modelo/Status/Ações.
+Os dados referente ao salvado são:
+STATUS
+SINISTRO
+APOLICE
+DATA RECEBIMENTO SALVADO
+DATA PEDIDO COTAÇÃO REMOÇÃO
+NOME SEGURADO
+NOME TERCEIRO
+PLACA
+MARCA
+MODELO
+ANO
+N° FIPE
+VALOR FIPE
+MES/ANO REF FIPE
+LEILOEIRO
+STATUS REMOÇÃO LEILOEIRO
+LOCAL ATUAL VEÍCULO
+DATA ENTRADA PÁTIO LEILOEIRO
+VISTORIAS SOLICITADA - MONTA
+VISTORIAS RECEBIDAS - MONTA
+VISTORIAS SOLICITADA - ECV
+VISTORIAS RECEBIDAS - ECV
+CLASSIFICAÇÃO DE DANOS
+ECV
+VALOR TOTAL DA INDENIZAÇÃO
+FRANQUIA - OUTROS DESCONTOS
+VALOR PAGO PELA CIA
+DATA PAGTO INDENIZAÇÃO
+DATA RECEBIMENTO DOCS PARA EMISSÃO NF ENTRADA
+DATA SOLICITAÇÃO NF ENTRADA
+DATA RECEBIMENTO NF ENTRADA
+N° NF ENTRADA
+VALOR NF ENTRADA
+DATA SOLICITAÇÃO NF SAÍDA
+DATA RECEBIMENTO NF SAIDA
+N° NF SAIDA
+VALOR NF SAIDA
+DATA SOLICITAÇÃO RECORTE CHASSI
+DATA RECEBIMENTO RECORTE CHASSI
+DATA DOCS DISPONÍVEL DESPACHANTE - TRANSF. SEGURADORA
+DATA RECEBIMENTO DOCS DESPACHANTE - TRANSF. SEGURADORA
+DATA VENDA DO SALVADO (LEILÃO)
+VALOR DA VENDA
+NOME ARREMATANTE
+DATA DOCS DISPONÍVEL DESPACHANTE - TRANSF. ARREMATANTE
+DATA RECEBIMENTO DOCS DESPACHANTE - TRANSF. ARREMATANTE
+DOC TRANSFERIDO AO ARREMATANTE?
+ANALISTA RESPONSAVEL
+HISTÓRICO
+quando adicionado salvado deve conter todos estes campos para ser digitado
+quando atualizar dados do salvado deve ser possível atualizar qualquer campo
+na pagina salvados os campos Vistorias Solicitada - Monta/Vistorias Recebidas - Monta/Vistorias Solicitada - ECV/Vistorias Recebidas - ECV são do tipo data dia/mes/ano ajuste o formulario e o banco de dados se necessario
+e no campo Mês/Ano Ref. FIPE é preenchido com mes/ano
+e no detalhe do salvado as datas devem ser apresentadas como dia/mes/ano excerto o campo Mês/Ano Ref. FIPE que deve ser apresentado como mês/ano.
+campos Valor FIPE/Valor Total da Indenização/Franquia - Outros Descontos/Valor Pago pela Cia/Valor NF Entrada/Valor NF Saída/Valor da Venda - formatar como valor monetario
+campos status tem que ter a opção em branco junto com os demais e ser o valor defalt em branco
+
+implementar:
+o campo Doc Transferido ao Arrematante? tem que ter a opção em branco junto com os demais e ser o valor defalt em branco
+ajustar listas de campos
+

@@ -50,3 +50,21 @@ body {
     padding: 0.5em 1em;
     font-size: 0.9em;
 }
+
+.table-hover tbody tr {
+    cursor: pointer;
+}
+
+/* Estilo para campos inválidos */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545 !important;
+    background-image: none;
+    /* Remove o ícone padrão do Bootstrap, se necessário */
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}

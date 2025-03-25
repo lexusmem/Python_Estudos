@@ -8,6 +8,7 @@
                 <th>ID</th>
                 <th>Sinistro</th>
                 <th>Placa</th>
+                <th>Marca</th>
                 <th>Modelo</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -15,16 +16,17 @@
         </thead>
         <tbody>
             {% for salvado in salvados %}
-            <tr>
-                <td>{{ salvado[0] }}</td>
-                <td>{{ salvado[1] }}</td>
-                <td>{{ salvado[2] }}</td>
-                <td>{{ salvado[3] }}</td>
-                <td><span class="badge bg-{{ 'success' if salvado[4] == 'Vendido' else 'primary' }}">{{ salvado[4]
-                        }}</span></td>
+            <tr style="cursor: pointer;" onclick="window.location='{{ url_for('detalhes', id=salvado.id) }}';">
+                <td>{{ salvado.id }}</td>
+                <td>{{ salvado.sinistro }}</td>
+                <td>{{ salvado.placa }}</td>
+                <td>{{ salvado.marca }}</td>
+                <td>{{ salvado.modelo }}</td>
+                <td><span class="badge bg-{{ 'success' if salvado.status == 'Finalizado' else 'primary' }}">{{
+                        salvado.status }}</span></td>
                 <td>
-                    <a href="{{ url_for('atualizar', id=salvado[0]) }}"
-                        class="btn btn-sm btn-outline-primary">Atualizar</a>
+                    <a href="{{ url_for('atualizar', id=salvado.id) }}" class="btn btn-sm btn-outline-primary"
+                        onclick="event.stopPropagation();">Atualizar</a>
                 </td>
             </tr>
             {% endfor %}

@@ -1,173 +1,152 @@
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
+from models import Salvado, Database
 from datetime import datetime
 
 app = Flask(__name__)
+db = Database()
 
-# Configuração do banco de dados SQLite
+# Mapeamento de nomes técnicos para nomes amigáveis
+FIELD_NAMES = {
+    'status': 'Status',
+    'sinistro': 'Sinistro',
+    'apolice': 'Apólice',
+    'data_recebimento_salvado': 'Data Recebimento do Salvado',
+    'data_pedido_cotacao_remocao': 'Data Pedido Cotação Remoção',
+    'nome_segurado': 'Nome Segurado',
+    'nome_terceiro': 'Nome Terceiro',
+    'placa': 'Placa',
+    'marca': 'Marca',
+    'modelo': 'Modelo',
+    'ano': 'Ano'
+}
 
-
-def init_db():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    # Tabela de salvados
-    c.execute('''CREATE TABLE IF NOT EXISTS salvados (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sinistro TEXT NOT NULL,
-        placa TEXT NOT NULL,
-        modelo TEXT,
-        status TEXT DEFAULT 'Removido',
-        data_remocao TEXT,
-        data_transferencia_seguradora TEXT,
-        data_vistoria1 TEXT,
-        data_vistoria2 TEXT,
-        custo REAL,
-        data_leilao TEXT,
-        valor_arremate REAL,
-        comprador TEXT,
-        data_transferencia_comprador TEXT
-    )''')
-    # Tabela de opções de status
-    c.execute('''CREATE TABLE IF NOT EXISTS status_opcoes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL UNIQUE
-    )''')
-    # Inserir status iniciais (se a tabela estiver vazia)
-    c.execute("SELECT COUNT(*) FROM status_opcoes")
-    if c.fetchone()[0] == 0:
-        status_iniciais = ['Removido', 'Em Remoção',
-                           'Vendido', 'Aguardando Vistoria']
-        c.executemany("INSERT INTO status_opcoes (nome) VALUES (?)", [
-                      (s,) for s in status_iniciais])
-    conn.commit()
-    conn.close()
-
-# Função para obter lista de status disponíveis
+# Filtro personalizado para formatar datas no Jinja2
 
 
-def get_status_opcoes():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("SELECT nome FROM status_opcoes")
-    status = [row[0] for row in c.fetchall()]
-    conn.close()
-    return status
+def strftime_filter(value, format_string):
+    if value and isinstance(value, (datetime, str)):
+        if isinstance(value, str):
+            try:
+                value = datetime.strptime(value, '%Y-%m-%d')
+            except ValueError:
+                return value  # Retorna o valor original se não for uma data válida
+        return value.strftime(format_string)
+    return ''
 
-# Rota para a página inicial (listagem de salvados)
+# Filtro personalizado para formatar valores monetários
+
+
+def currency_filter(value):
+    if value is None or value == '':
+        return ''
+    try:
+        value = float(value)
+        return f"R$ {value:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',')
+    except (ValueError, TypeError):
+        return value  # Retorna o valor original se não for numérico
+
+
+# Registrar os filtros no Jinja2
+app.jinja_env.filters['strftime'] = strftime_filter
+app.jinja_env.filters['currency'] = currency_filter
 
 
 @app.route('/')
 def index():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM salvados")
-    salvados = c.fetchall()
-    conn.close()
+    salvados = db.get_all_salvados()
     return render_template('index.html', salvados=salvados)
-
-# Rota para adicionar ou editar um salvado
 
 
 @app.route('/salvado', methods=['GET', 'POST'])
 def salvado():
-    status_opcoes = get_status_opcoes()
+    status_opcoes = db.get_status_opcoes()
+    errors = {}
+    form_data = {}
     if request.method == 'POST':
-        sinistro = request.form['sinistro']
-        placa = request.form['placa']
-        modelo = request.form['modelo']
-        status = request.form['status']
-        data_remocao = request.form['data_remocao']
-
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
-        c.execute('''INSERT INTO salvados (sinistro, placa, modelo, status, data_remocao)
-                     VALUES (?, ?, ?, ?, ?)''', (sinistro, placa, modelo, status, data_remocao))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
-
-    return render_template('salvado_form.html', status_opcoes=status_opcoes)
-
-# Rota para atualizar status de um salvado
+        form_data = {key: request.form.get(key, '')
+                     for key in db.get_columns()}
+        required_fields = [
+            'status', 'sinistro', 'apolice', 'data_recebimento_salvado', 'data_pedido_cotacao_remocao',
+            'nome_segurado', 'nome_terceiro', 'placa', 'marca', 'modelo', 'ano'
+        ]
+        for field in required_fields:
+            if not form_data[field] or form_data[field].strip() == '':
+                errors[field] = True
+        if not errors:
+            # Converter valores monetários de texto para float, tratando casos especiais
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+                value = form_data[key].strip()
+                if value and value.lower() != 'none':
+                    try:
+                        form_data[key] = float(value.replace(',', '.'))
+                    except ValueError:
+                        form_data[key] = None
+                else:
+                    form_data[key] = None
+            salvado = Salvado(**form_data)
+            db.add_salvado(salvado)
+            return redirect(url_for('index'))
+        error_messages = [FIELD_NAMES[field] for field in errors.keys()]
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=[])
 
 
 @app.route('/atualizar/<int:id>', methods=['GET', 'POST'])
 def atualizar(id):
-    status_opcoes = get_status_opcoes()
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-
+    status_opcoes = db.get_status_opcoes()
+    salvado = db.get_salvado_by_id(id)
+    errors = {}
     if request.method == 'POST':
-        status = request.form['status']
-        if status == 'Transferência Concluída':
-            data_transferencia_seguradora = request.form['data_transferencia_seguradora']
-            c.execute("UPDATE salvados SET status=?, data_transferencia_seguradora=? WHERE id=?",
-                      (status, data_transferencia_seguradora, id))
-        elif status == 'Vistorias Concluídas':
-            data_vistoria1 = request.form['data_vistoria1']
-            data_vistoria2 = request.form['data_vistoria2']
-            c.execute("UPDATE salvados SET status=?, data_vistoria1=?, data_vistoria2=? WHERE id=?",
-                      (status, data_vistoria1, data_vistoria2, id))
-        elif status == 'Custo Definido':
-            custo = request.form['custo']
-            c.execute(
-                "UPDATE salvados SET status=?, custo=? WHERE id=?", (status, custo, id))
-        elif status == 'Vendido':
-            data_leilao = request.form['data_leilao']
-            valor_arremate = request.form['valor_arremate']
-            comprador = request.form['comprador']
-            c.execute("UPDATE salvados SET status=?, data_leilao=?, valor_arremate=?, comprador=? WHERE id=?",
-                      (status, data_leilao, valor_arremate, comprador, id))
-        elif status == 'Transferência Finalizada':
-            data_transferencia_comprador = request.form['data_transferencia_comprador']
-            c.execute("UPDATE salvados SET status=?, data_transferencia_comprador=? WHERE id=?",
-                      (status, data_transferencia_comprador, id))
-        else:
-            c.execute("UPDATE salvados SET status=? WHERE id=?", (status, id))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
+        salvado_data = {key: request.form.get(
+            key, '') for key in db.get_columns()}
+        required_fields = [
+            'status', 'sinistro', 'apolice', 'data_recebimento_salvado', 'data_pedido_cotacao_remocao',
+            'nome_segurado', 'nome_terceiro', 'placa', 'marca', 'modelo', 'ano'
+        ]
+        for field in required_fields:
+            if not salvado_data[field] or salvado_data[field].strip() == '':
+                errors[field] = True
+        if not errors:
+            # Converter valores monetários de texto para float, tratando casos especiais
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+                value = salvado_data[key].strip()
+                if value and value.lower() != 'none':
+                    try:
+                        salvado_data[key] = float(value.replace(',', '.'))
+                    except ValueError:
+                        salvado_data[key] = None
+                else:
+                    salvado_data[key] = None
+            salvado = Salvado(id=id, **salvado_data)
+            db.update_salvado(salvado)
+            return redirect(url_for('index'))
+        error_messages = [FIELD_NAMES[field] for field in errors.keys()]
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, salvado=salvado, form_data=salvado_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, salvado=salvado, form_data={}, errors=errors, error_messages=[])
 
-    c.execute("SELECT * FROM salvados WHERE id=?", (id,))
-    salvado = c.fetchone()
-    conn.close()
-    return render_template('salvado_form.html', salvado=salvado, status_opcoes=status_opcoes)
 
-# Nova rota para gerenciar status
+@app.route('/detalhes/<int:id>')
+def detalhes(id):
+    salvado = db.get_salvado_by_id(id)
+    if salvado:
+        return render_template('salvado_detalhes.html', salvado=salvado)
+    return redirect(url_for('index'))
 
 
 @app.route('/gerenciar_status', methods=['GET', 'POST'])
 def gerenciar_status():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-
     if request.method == 'POST':
         acao = request.form['acao']
         if acao == 'inserir':
-            novo_status = request.form['novo_status']
-            try:
-                c.execute(
-                    "INSERT INTO status_opcoes (nome) VALUES (?)", (novo_status,))
-                conn.commit()
-            except sqlite3.IntegrityError:
-                pass  # Ignora se já existir
+            db.add_status(request.form['novo_status'])
         elif acao == 'excluir':
-            status_id = request.form['status_id']
-            c.execute("DELETE FROM status_opcoes WHERE id=?", (status_id,))
-            conn.commit()
+            db.delete_status(request.form['status_id'])
         elif acao == 'alterar':
-            status_id = request.form['status_id']
-            novo_nome = request.form['novo_nome']
-            c.execute("UPDATE status_opcoes SET nome=? WHERE id=?",
-                      (novo_nome, status_id))
-            conn.commit()
-
-    c.execute("SELECT * FROM status_opcoes")
-    status_opcoes = c.fetchall()
-    conn.close()
+            db.update_status(
+                request.form['status_id'], request.form['novo_nome'])
+    status_opcoes = db.get_all_status_opcoes()
     return render_template('gerenciar_status.html', status_opcoes=status_opcoes)
 
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
