@@ -56,9 +56,19 @@ na pagina salvados os campos Vistorias Solicitada - Monta/Vistorias Recebidas - 
 e no campo Mês/Ano Ref. FIPE é preenchido com mes/ano
 e no detalhe do salvado as datas devem ser apresentadas como dia/mes/ano excerto o campo Mês/Ano Ref. FIPE que deve ser apresentado como mês/ano.
 campos Valor FIPE/Valor Total da Indenização/Franquia - Outros Descontos/Valor Pago pela Cia/Valor NF Entrada/Valor NF Saída/Valor da Venda - formatar como valor monetario
-campos status tem que ter a opção em branco junto com os demais e ser o valor defalt em branco
+campos status tem que ter a opção em branco junto com os demais e ser o valor default em branco
+
+o campo Doc Transferido ao Arrematante? tem que ter a opção em branco junto com os demais e ser o valor defalt em branco
+
+na pagina gerenciar status deve passar a se chamar gerenciar, pois devemos alem de gerenciar o status devemos ter outros campos que devemos gerenciar e implementar.
+a tela deve ter uma divisão lateral que devera ter as opções que inicialmente tera a "Status" que atualmente é a "gerenciar status". bara lateral da pagina é fixa e ao cliclar na opção status deve carregar no restante da pagina.
+
+
+vamos inserir nova opção no gerenciar chamado "Analistas" que deve ter campos para preenchimento nome, e-mail e cargo (lista com opções em branco (default), Subscritor e Gerente)
+os analistas inseridos aqui deve estar na lista do campo "Analista Responsável" e deve ser inserido no banco de dado estes dados.
+
+<div class="container mt-4">
 
 implementar:
-o campo Doc Transferido ao Arrematante? tem que ter a opção em branco junto com os demais e ser o valor defalt em branco
-ajustar listas de campos
-
+AJUSTAR CAMPO ANALISTA NO CADASTRAR OU ATUALIZAR SALVADO
+- leiloeiro (lista de leiloeiros) - aqui deve ter a posibilidade 

@@ -139,6 +139,15 @@ class Database:
                 nome TEXT UNIQUE
             )
         ''')
+        # Nova tabela para analistas
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS analistas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                email TEXT NOT NULL,
+                cargo TEXT
+            )
+        ''')
         self.conn.commit()
 
     def add_salvado(self, salvado):
@@ -271,3 +280,31 @@ class Database:
         cursor = self.conn.cursor()
         cursor.execute('SELECT * FROM status_opcoes')
         return cursor.fetchall()
+
+    # Novos métodos para analistas
+    def add_analista(self, nome, email, cargo):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT INTO analistas (nome, email, cargo) VALUES (?, ?, ?)', (nome, email, cargo))
+        self.conn.commit()
+
+    def update_analista(self, analista_id, nome, email, cargo):
+        cursor = self.conn.cursor()
+        cursor.execute('UPDATE analistas SET nome=?, email=?, cargo=? WHERE id=?',
+                       (nome, email, cargo, analista_id))
+        self.conn.commit()
+
+    def delete_analista(self, analista_id):
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM analistas WHERE id=?', (analista_id,))
+        self.conn.commit()
+
+    def get_all_analistas(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT id, nome, email, cargo FROM analistas')
+        return cursor.fetchall()
+
+    def get_analistas_opcoes(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT nome FROM analistas')
+        return [row[0] for row in cursor.fetchall()]

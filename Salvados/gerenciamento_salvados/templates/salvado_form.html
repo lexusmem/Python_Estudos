@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-4">{% if salvado %}Atualizar Salvado{% else %}Adicionar Salvado{% endif %}</h2>
+<h2 class="mb-4  container mt-4">{% if salvado %}Atualizar Salvado{% else %}Adicionar Salvado{% endif %}</h2>
 {% if errors %}
-<div class="alert alert-danger">
+<div class="alert alert-danger  container mt-4">
     Preencha os campos obrigatórios! Campos com erro: {{ error_messages|join(', ') }}
 </div>
 {% endif %}
-<div class="card p-4 shadow-sm">
+<div class="card p-4 shadow-sm  container mt-4">
     <form method="POST"
         action="{% if salvado %}{{ url_for('atualizar', id=salvado.id) }}{% else %}{{ url_for('salvado') }}{% endif %}"
         id="salvadoForm">
@@ -71,9 +71,10 @@
                     value="{{ salvado.modelo if salvado else form_data.modelo if form_data else '' }}">
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">Ano</label>
+                <label class="form-label">Ano/Modelo</label>
                 <input type="text" class="form-control {% if errors.ano %}is-invalid{% endif %}" name="ano"
-                    value="{{ salvado.ano if salvado else form_data.ano if form_data else '' }}">
+                    value="{{ salvado.ano if salvado else form_data.ano if form_data else '' }}"
+                    placeholder="aaaa/aaaa">
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">N° FIPE</label>
@@ -89,7 +90,7 @@
                 <label class="form-label">Mês/Ano Ref. FIPE</label>
                 <input type="text" class="form-control" name="mes_ano_ref_fipe"
                     value="{{ salvado.mes_ano_ref_fipe if salvado else form_data.mes_ano_ref_fipe if form_data else '' }}"
-                    placeholder="MM/AAAA">
+                    placeholder="mm/aaaa">
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Leiloeiro</label>
@@ -254,6 +255,9 @@
             <div class="col-md-6 mb-3">
                 <label class="form-label">Doc Transferido ao Arrematante?</label>
                 <select class="form-select" name="doc_transferido_arrematante">
+                    <option value="" {% if (not salvado and not form_data.doc_transferido_arrematante) or (salvado and
+                        salvado.doc_transferido_arrematante=='' ) or (form_data and
+                        form_data.doc_transferido_arrematante=='' ) %}selected{% endif %}>Selecione</option>
                     <option value="Sim" {% if (salvado and salvado.doc_transferido_arrematante=='Sim' ) or (form_data
                         and form_data.doc_transferido_arrematante=='Sim' ) %}selected{% endif %}>Sim</option>
                     <option value="Não" {% if (salvado and salvado.doc_transferido_arrematante=='Não' ) or (form_data
