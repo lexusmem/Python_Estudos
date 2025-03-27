@@ -75,7 +75,7 @@ AJUSTAR CAMPO ANALISTA NO CADASTRAR OU ATUALIZAR SALVADO
 - pagina para controlar e lançar despesas pagas nos salvados, na pagina deve ter opção de lançar as despesas (fornecedor/data/tipo de despesas/valor/observação) e deve ter a lista das despesas lançadas, as despesas são vinculadas aos salvados, nesta pagina deve ser possivel pesquisar as despesas por placa/sinistro/apólice/segurado/fornecedor e deve ter resumo do total das despesas pagas
 - na pagina de detalhe do salvado incluir botão para lançar as despesas
 - na pagina de detalhe do salvado incluir valor sugestão de venda (este valor deve ser o valor médio com base no valor de venda com valor da fipe das últimas 10 vendas de acordo com o tipo da monta)
-- incluir dado do usuario responsavel pelo salvado na tela inicial
+- incluir dado do analista/terceiro responsavel pelo salvado na tela inicial
 - criar pagina com dados e graficos sobre as vendas e dados sobre estoques dos salvados
 	- dados na tela com resumos de quantidade de salvados / valores de vendas / valores de despesas
 	- quantidade de salvados por status
