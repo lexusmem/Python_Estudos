@@ -8,10 +8,11 @@
                 <th>ID</th>
                 <th>Sinistro</th>
                 <th>Placa</th>
-                <th>Analista</th>
+                <th>Marca</th>
+                <th>Modelo</th>
                 <th>Data Salvado</th>
-                <th>Ações</th>
                 <th>Status</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -20,12 +21,11 @@
                 <td>{{ salvado.id }}</td>
                 <td>{{ salvado.sinistro }}</td>
                 <td>{{ salvado.placa }}</td>
-                <td>{{ salvado.analista_responsavel }}</td>
+                <td>{{ salvado.marca }}</td>
+                <td>{{ salvado.modelo }}</td>
                 <td>{{ salvado.data_recebimento_salvado|strftime('%d/%m/%Y') }}</td>
-                <td>
-                    <span class="badge bg-{{ 'success' if salvado.status == 'Finalizado' else 'primary' }}">{{
-                        salvado.status }}</span>
-                </td>
+                <td><span class="badge bg-{{ 'success' if salvado.status == 'Finalizado' else 'primary' }}">{{
+                        salvado.status }}</span></td>
                 <td>
                     <a href="{{ url_for('atualizar', id=salvado.id) }}" class="btn btn-sm btn-outline-primary"
                         onclick="event.stopPropagation();">Atualizar</a>

@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import date
 
 
 class Salvado:
@@ -6,17 +7,19 @@ class Salvado:
                  data_pedido_cotacao_remocao=None, nome_segurado=None, nome_terceiro=None, placa=None,
                  marca=None, modelo=None, ano=None, n_fipe=None, valor_fipe=None, mes_ano_ref_fipe=None,
                  leiloeiro=None, status_remocao_leiloeiro=None, local_atual_veiculo=None,
-                 data_entrada_patio_leiloeiro=None, vistorias_solicitada_monta=None, vistorias_recebidas_monta=None,
-                 vistorias_solicitada_ecv=None, vistorias_recebidas_ecv=None, classificacao_danos=None, ecv=None,
-                 valor_total_indenizacao=None, franquia_outros_descontos=None, valor_pago_pela_cia=None,
-                 data_pagto_indenizacao=None, data_recebimento_docs_nf_entrada=None, data_solicitacao_nf_entrada=None,
+                 data_entrada_patio_leiloeiro=None, vistorias_solicitada_monta=None,
+                 vistorias_recebidas_monta=None, vistorias_solicitada_ecv=None, vistorias_recebidas_ecv=None,
+                 classificacao_danos=None, ecv=None, valor_total_indenizacao=None,
+                 franquia_outros_descontos=None, valor_pago_pela_cia=None, data_pagto_indenizacao=None,
+                 data_recebimento_docs_nf_entrada=None, data_solicitacao_nf_entrada=None,
                  data_recebimento_nf_entrada=None, n_nf_entrada=None, valor_nf_entrada=None,
-                 data_solicitacao_nf_saida=None, data_recebimento_nf_saida=None, n_nf_saida=None, valor_nf_saida=None,
-                 data_solicitacao_recorte_chassi=None, data_recebimento_recorte_chassi=None,
-                 data_docs_disponivel_transf_seguradora=None, data_recebimento_docs_transf_seguradora=None,
-                 data_venda_salvado=None, valor_venda=None, nome_arrematante=None,
-                 data_docs_disponivel_transf_arrematante=None, data_recebimento_docs_transf_arrematante=None,
-                 doc_transferido_arrematante=None, analista_responsavel=None, historico=None):
+                 data_solicitacao_nf_saida=None, data_recebimento_nf_saida=None, n_nf_saida=None,
+                 valor_nf_saida=None, data_solicitacao_recorte_chassi=None,
+                 data_recebimento_recorte_chassi=None, data_docs_disponivel_transf_seguradora=None,
+                 data_recebimento_docs_transf_seguradora=None, data_venda_salvado=None, valor_venda=None,
+                 nome_arrematante=None, data_docs_disponivel_transf_arrematante=None,
+                 data_recebimento_docs_transf_arrematante=None, doc_transferido_arrematante=None,
+                 analista_responsavel=None, historico=None):
         self.id = id
         self.status = status
         self.sinistro = sinistro
@@ -136,6 +139,7 @@ class Database:
                 nome TEXT UNIQUE
             )
         ''')
+        # Nova tabela para analistas
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS analistas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -277,6 +281,7 @@ class Database:
         cursor.execute('SELECT * FROM status_opcoes')
         return cursor.fetchall()
 
+    # Novos métodos para analistas
     def add_analista(self, nome, email, cargo):
         cursor = self.conn.cursor()
         cursor.execute(

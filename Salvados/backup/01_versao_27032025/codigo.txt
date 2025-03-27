@@ -1,0 +1,1393 @@
+app.py:
+
+from flask import Flask, render_template, request, redirect, url_for
+from models import Salvado, Database
+from datetime import datetime
+
+app = Flask(__name__)
+db = Database()
+
+# Mapeamento de nomes técnicos para nomes amigáveis
+FIELD_NAMES = {
+    'status': 'Status',
+    'sinistro': 'Sinistro',
+    'apolice': 'Apólice',
+    'data_recebimento_salvado': 'Data Recebimento do Salvado',
+    'data_pedido_cotacao_remocao': 'Data Pedido Cotação Remoção',
+    'nome_segurado': 'Nome Segurado',
+    'nome_terceiro': 'Nome Terceiro',
+    'placa': 'Placa',
+    'marca': 'Marca',
+    'modelo': 'Modelo',
+    'ano': 'Ano'
+}
+
+# Filtro personalizado para formatar datas no Jinja2
+
+
+def strftime_filter(value, format_string):
+    if value and isinstance(value, (datetime, str)):
+        if isinstance(value, str):
+            try:
+                value = datetime.strptime(value, '%Y-%m-%d')
+            except ValueError:
+                return value  # Retorna o valor original se não for uma data válida
+        return value.strftime(format_string)
+    return ''
+
+# Filtro personalizado para formatar valores monetários
+
+
+def currency_filter(value):
+    if value is None or value == '':
+        return ''
+    try:
+        value = float(value)
+        return f"R$ {value:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',')
+    except (ValueError, TypeError):
+        return value  # Retorna o valor original se não for numérico
+
+
+# Registrar os filtros no Jinja2
+app.jinja_env.filters['strftime'] = strftime_filter
+app.jinja_env.filters['currency'] = currency_filter
+
+
+@app.route('/')
+def index():
+    salvados = db.get_all_salvados()
+    return render_template('index.html', salvados=salvados)
+
+
+@app.route('/salvado', methods=['GET', 'POST'])
+def salvado():
+    status_opcoes = db.get_status_opcoes()
+    analistas_opcoes = db.get_analistas_opcoes()
+    errors = {}
+    form_data = {}
+    if request.method == 'POST':
+        form_data = {key: request.form.get(key, '')
+                     for key in db.get_columns()}
+        required_fields = ['status', 'sinistro', 'apolice', 'data_recebimento_salvado', 'data_pedido_cotacao_remocao',
+                           'nome_segurado', 'nome_terceiro', 'placa', 'marca', 'modelo', 'ano']
+        for field in required_fields:
+            if not form_data[field] or form_data[field].strip() == '':
+                errors[field] = True
+        if not errors:
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+                value = form_data[key].strip()
+                if value and value.lower() != 'none':
+                    try:
+                        form_data[key] = float(value.replace(',', '.'))
+                    except ValueError:
+                        form_data[key] = None
+                else:
+                    form_data[key] = None
+            salvado = Salvado(**form_data)
+            db.add_salvado(salvado)
+            return redirect(url_for('index'))
+        error_messages = [FIELD_NAMES[field] for field in errors.keys()]
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=[])
+
+
+@app.route('/atualizar/<int:id>', methods=['GET', 'POST'])
+def atualizar(id):
+    status_opcoes = db.get_status_opcoes()
+    analistas_opcoes = db.get_analistas_opcoes()
+    salvado = db.get_salvado_by_id(id)
+    errors = {}
+    if request.method == 'POST':
+        salvado_data = {key: request.form.get(
+            key, '') for key in db.get_columns()}
+        required_fields = ['status', 'sinistro', 'apolice', 'data_recebimento_salvado', 'data_pedido_cotacao_remocao',
+                           'nome_segurado', 'nome_terceiro', 'placa', 'marca', 'modelo', 'ano']
+        for field in required_fields:
+            if not salvado_data[field] or salvado_data[field].strip() == '':
+                errors[field] = True
+        if not errors:
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+                value = salvado_data[key].strip()
+                if value and value.lower() != 'none':
+                    try:
+                        salvado_data[key] = float(value.replace(',', '.'))
+                    except ValueError:
+                        salvado_data[key] = None
+                else:
+                    salvado_data[key] = None
+            salvado = Salvado(id=id, **salvado_data)
+            db.update_salvado(salvado)
+            return redirect(url_for('index'))
+        error_messages = [FIELD_NAMES[field] for field in errors.keys()]
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=salvado, form_data=salvado_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=salvado, form_data={}, errors=errors, error_messages=[])
+
+
+@app.route('/detalhes/<int:id>')
+def detalhes(id):
+    salvado = db.get_salvado_by_id(id)
+    if salvado:
+        return render_template('salvado_detalhes.html', salvado=salvado)
+    return redirect(url_for('index'))
+
+
+@app.route('/gerenciar', methods=['GET', 'POST'])
+def gerenciar():
+    # Padrão: "status" se não houver parâmetro
+    secao = request.args.get('secao', 'status')
+    if request.method == 'POST':
+        acao = request.form['acao']
+        if secao == 'status':
+            if acao == 'inserir':
+                db.add_status(request.form['novo_status'])
+            elif acao == 'excluir':
+                db.delete_status(request.form['status_id'])
+            elif acao == 'alterar':
+                db.update_status(
+                    request.form['status_id'], request.form['novo_nome'])
+        elif secao == 'analistas':
+            if acao == 'inserir':
+                db.add_analista(
+                    request.form['nome'], request.form['email'], request.form['cargo'])
+            elif acao == 'excluir':
+                db.delete_analista(request.form['analista_id'])
+            elif acao == 'alterar':
+                db.update_analista(
+                    request.form['analista_id'], request.form['nome'], request.form['email'], request.form['cargo'])
+    status_opcoes = db.get_all_status_opcoes()
+    analistas = db.get_all_analistas()
+    return render_template('gerenciar.html', status_opcoes=status_opcoes, analistas=analistas, secao=secao)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+models.py:
+import sqlite3
+from datetime import date
+
+
+class Salvado:
+    def __init__(self, id=None, status=None, sinistro=None, apolice=None, data_recebimento_salvado=None,
+                 data_pedido_cotacao_remocao=None, nome_segurado=None, nome_terceiro=None, placa=None,
+                 marca=None, modelo=None, ano=None, n_fipe=None, valor_fipe=None, mes_ano_ref_fipe=None,
+                 leiloeiro=None, status_remocao_leiloeiro=None, local_atual_veiculo=None,
+                 data_entrada_patio_leiloeiro=None, vistorias_solicitada_monta=None,
+                 vistorias_recebidas_monta=None, vistorias_solicitada_ecv=None, vistorias_recebidas_ecv=None,
+                 classificacao_danos=None, ecv=None, valor_total_indenizacao=None,
+                 franquia_outros_descontos=None, valor_pago_pela_cia=None, data_pagto_indenizacao=None,
+                 data_recebimento_docs_nf_entrada=None, data_solicitacao_nf_entrada=None,
+                 data_recebimento_nf_entrada=None, n_nf_entrada=None, valor_nf_entrada=None,
+                 data_solicitacao_nf_saida=None, data_recebimento_nf_saida=None, n_nf_saida=None,
+                 valor_nf_saida=None, data_solicitacao_recorte_chassi=None,
+                 data_recebimento_recorte_chassi=None, data_docs_disponivel_transf_seguradora=None,
+                 data_recebimento_docs_transf_seguradora=None, data_venda_salvado=None, valor_venda=None,
+                 nome_arrematante=None, data_docs_disponivel_transf_arrematante=None,
+                 data_recebimento_docs_transf_arrematante=None, doc_transferido_arrematante=None,
+                 analista_responsavel=None, historico=None):
+        self.id = id
+        self.status = status
+        self.sinistro = sinistro
+        self.apolice = apolice
+        self.data_recebimento_salvado = data_recebimento_salvado
+        self.data_pedido_cotacao_remocao = data_pedido_cotacao_remocao
+        self.nome_segurado = nome_segurado
+        self.nome_terceiro = nome_terceiro
+        self.placa = placa
+        self.marca = marca
+        self.modelo = modelo
+        self.ano = ano
+        self.n_fipe = n_fipe
+        self.valor_fipe = valor_fipe
+        self.mes_ano_ref_fipe = mes_ano_ref_fipe
+        self.leiloeiro = leiloeiro
+        self.status_remocao_leiloeiro = status_remocao_leiloeiro
+        self.local_atual_veiculo = local_atual_veiculo
+        self.data_entrada_patio_leiloeiro = data_entrada_patio_leiloeiro
+        self.vistorias_solicitada_monta = vistorias_solicitada_monta
+        self.vistorias_recebidas_monta = vistorias_recebidas_monta
+        self.vistorias_solicitada_ecv = vistorias_solicitada_ecv
+        self.vistorias_recebidas_ecv = vistorias_recebidas_ecv
+        self.classificacao_danos = classificacao_danos
+        self.ecv = ecv
+        self.valor_total_indenizacao = valor_total_indenizacao
+        self.franquia_outros_descontos = franquia_outros_descontos
+        self.valor_pago_pela_cia = valor_pago_pela_cia
+        self.data_pagto_indenizacao = data_pagto_indenizacao
+        self.data_recebimento_docs_nf_entrada = data_recebimento_docs_nf_entrada
+        self.data_solicitacao_nf_entrada = data_solicitacao_nf_entrada
+        self.data_recebimento_nf_entrada = data_recebimento_nf_entrada
+        self.n_nf_entrada = n_nf_entrada
+        self.valor_nf_entrada = valor_nf_entrada
+        self.data_solicitacao_nf_saida = data_solicitacao_nf_saida
+        self.data_recebimento_nf_saida = data_recebimento_nf_saida
+        self.n_nf_saida = n_nf_saida
+        self.valor_nf_saida = valor_nf_saida
+        self.data_solicitacao_recorte_chassi = data_solicitacao_recorte_chassi
+        self.data_recebimento_recorte_chassi = data_recebimento_recorte_chassi
+        self.data_docs_disponivel_transf_seguradora = data_docs_disponivel_transf_seguradora
+        self.data_recebimento_docs_transf_seguradora = data_recebimento_docs_transf_seguradora
+        self.data_venda_salvado = data_venda_salvado
+        self.valor_venda = valor_venda
+        self.nome_arrematante = nome_arrematante
+        self.data_docs_disponivel_transf_arrematante = data_docs_disponivel_transf_arrematante
+        self.data_recebimento_docs_transf_arrematante = data_recebimento_docs_transf_arrematante
+        self.doc_transferido_arrematante = doc_transferido_arrematante
+        self.analista_responsavel = analista_responsavel
+        self.historico = historico
+
+
+class Database:
+    def __init__(self):
+        self.conn = sqlite3.connect('salvados.db', check_same_thread=False)
+        self.create_tables()
+
+    def create_tables(self):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS salvados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                status TEXT,
+                sinistro TEXT,
+                apolice TEXT,
+                data_recebimento_salvado DATE,
+                data_pedido_cotacao_remocao DATE,
+                nome_segurado TEXT,
+                nome_terceiro TEXT,
+                placa TEXT,
+                marca TEXT,
+                modelo TEXT,
+                ano TEXT,
+                n_fipe TEXT,
+                valor_fipe REAL,
+                mes_ano_ref_fipe TEXT,
+                leiloeiro TEXT,
+                status_remocao_leiloeiro TEXT,
+                local_atual_veiculo TEXT,
+                data_entrada_patio_leiloeiro DATE,
+                vistorias_solicitada_monta DATE,
+                vistorias_recebidas_monta DATE,
+                vistorias_solicitada_ecv DATE,
+                vistorias_recebidas_ecv DATE,
+                classificacao_danos TEXT,
+                ecv TEXT,
+                valor_total_indenizacao REAL,
+                franquia_outros_descontos REAL,
+                valor_pago_pela_cia REAL,
+                data_pagto_indenizacao DATE,
+                data_recebimento_docs_nf_entrada DATE,
+                data_solicitacao_nf_entrada DATE,
+                data_recebimento_nf_entrada DATE,
+                n_nf_entrada TEXT,
+                valor_nf_entrada REAL,
+                data_solicitacao_nf_saida DATE,
+                data_recebimento_nf_saida DATE,
+                n_nf_saida TEXT,
+                valor_nf_saida REAL,
+                data_solicitacao_recorte_chassi DATE,
+                data_recebimento_recorte_chassi DATE,
+                data_docs_disponivel_transf_seguradora DATE,
+                data_recebimento_docs_transf_seguradora DATE,
+                data_venda_salvado DATE,
+                valor_venda REAL,
+                nome_arrematante TEXT,
+                data_docs_disponivel_transf_arrematante DATE,
+                data_recebimento_docs_transf_arrematante DATE,
+                doc_transferido_arrematante TEXT,
+                analista_responsavel TEXT,
+                historico TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS status_opcoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT UNIQUE
+            )
+        ''')
+        # Nova tabela para analistas
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS analistas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                email TEXT NOT NULL,
+                cargo TEXT
+            )
+        ''')
+        self.conn.commit()
+
+    def add_salvado(self, salvado):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO salvados (
+                status, sinistro, apolice, data_recebimento_salvado, data_pedido_cotacao_remocao,
+                nome_segurado, nome_terceiro, placa, marca, modelo, ano, n_fipe, valor_fipe,
+                mes_ano_ref_fipe, leiloeiro, status_remocao_leiloeiro, local_atual_veiculo,
+                data_entrada_patio_leiloeiro, vistorias_solicitada_monta, vistorias_recebidas_monta,
+                vistorias_solicitada_ecv, vistorias_recebidas_ecv, classificacao_danos, ecv,
+                valor_total_indenizacao, franquia_outros_descontos, valor_pago_pela_cia,
+                data_pagto_indenizacao, data_recebimento_docs_nf_entrada, data_solicitacao_nf_entrada,
+                data_recebimento_nf_entrada, n_nf_entrada, valor_nf_entrada, data_solicitacao_nf_saida,
+                data_recebimento_nf_saida, n_nf_saida, valor_nf_saida, data_solicitacao_recorte_chassi,
+                data_recebimento_recorte_chassi, data_docs_disponivel_transf_seguradora,
+                data_recebimento_docs_transf_seguradora, data_venda_salvado, valor_venda,
+                nome_arrematante, data_docs_disponivel_transf_arrematante,
+                data_recebimento_docs_transf_arrematante, doc_transferido_arrematante,
+                analista_responsavel, historico
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            salvado.status, salvado.sinistro, salvado.apolice, salvado.data_recebimento_salvado,
+            salvado.data_pedido_cotacao_remocao, salvado.nome_segurado, salvado.nome_terceiro,
+            salvado.placa, salvado.marca, salvado.modelo, salvado.ano, salvado.n_fipe,
+            salvado.valor_fipe, salvado.mes_ano_ref_fipe, salvado.leiloeiro,
+            salvado.status_remocao_leiloeiro, salvado.local_atual_veiculo,
+            salvado.data_entrada_patio_leiloeiro, salvado.vistorias_solicitada_monta,
+            salvado.vistorias_recebidas_monta, salvado.vistorias_solicitada_ecv,
+            salvado.vistorias_recebidas_ecv, salvado.classificacao_danos, salvado.ecv,
+            salvado.valor_total_indenizacao, salvado.franquia_outros_descontos,
+            salvado.valor_pago_pela_cia, salvado.data_pagto_indenizacao,
+            salvado.data_recebimento_docs_nf_entrada, salvado.data_solicitacao_nf_entrada,
+            salvado.data_recebimento_nf_entrada, salvado.n_nf_entrada, salvado.valor_nf_entrada,
+            salvado.data_solicitacao_nf_saida, salvado.data_recebimento_nf_saida,
+            salvado.n_nf_saida, salvado.valor_nf_saida, salvado.data_solicitacao_recorte_chassi,
+            salvado.data_recebimento_recorte_chassi, salvado.data_docs_disponivel_transf_seguradora,
+            salvado.data_recebimento_docs_transf_seguradora, salvado.data_venda_salvado,
+            salvado.valor_venda, salvado.nome_arrematante,
+            salvado.data_docs_disponivel_transf_arrematante,
+            salvado.data_recebimento_docs_transf_arrematante, salvado.doc_transferido_arrematante,
+            salvado.analista_responsavel, salvado.historico
+        ))
+        self.conn.commit()
+
+    def update_salvado(self, salvado):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            UPDATE salvados SET
+                status=?, sinistro=?, apolice=?, data_recebimento_salvado=?, data_pedido_cotacao_remocao=?,
+                nome_segurado=?, nome_terceiro=?, placa=?, marca=?, modelo=?, ano=?, n_fipe=?, valor_fipe=?,
+                mes_ano_ref_fipe=?, leiloeiro=?, status_remocao_leiloeiro=?, local_atual_veiculo=?,
+                data_entrada_patio_leiloeiro=?, vistorias_solicitada_monta=?, vistorias_recebidas_monta=?,
+                vistorias_solicitada_ecv=?, vistorias_recebidas_ecv=?, classificacao_danos=?, ecv=?,
+                valor_total_indenizacao=?, franquia_outros_descontos=?, valor_pago_pela_cia=?,
+                data_pagto_indenizacao=?, data_recebimento_docs_nf_entrada=?, data_solicitacao_nf_entrada=?,
+                data_recebimento_nf_entrada=?, n_nf_entrada=?, valor_nf_entrada=?, data_solicitacao_nf_saida=?,
+                data_recebimento_nf_saida=?, n_nf_saida=?, valor_nf_saida=?, data_solicitacao_recorte_chassi=?,
+                data_recebimento_recorte_chassi=?, data_docs_disponivel_transf_seguradora=?,
+                data_recebimento_docs_transf_seguradora=?, data_venda_salvado=?, valor_venda=?,
+                nome_arrematante=?, data_docs_disponivel_transf_arrematante=?,
+                data_recebimento_docs_transf_arrematante=?, doc_transferido_arrematante=?,
+                analista_responsavel=?, historico=?
+            WHERE id=?
+        ''', (
+            salvado.status, salvado.sinistro, salvado.apolice, salvado.data_recebimento_salvado,
+            salvado.data_pedido_cotacao_remocao, salvado.nome_segurado, salvado.nome_terceiro,
+            salvado.placa, salvado.marca, salvado.modelo, salvado.ano, salvado.n_fipe,
+            salvado.valor_fipe, salvado.mes_ano_ref_fipe, salvado.leiloeiro,
+            salvado.status_remocao_leiloeiro, salvado.local_atual_veiculo,
+            salvado.data_entrada_patio_leiloeiro, salvado.vistorias_solicitada_monta,
+            salvado.vistorias_recebidas_monta, salvado.vistorias_solicitada_ecv,
+            salvado.vistorias_recebidas_ecv, salvado.classificacao_danos, salvado.ecv,
+            salvado.valor_total_indenizacao, salvado.franquia_outros_descontos,
+            salvado.valor_pago_pela_cia, salvado.data_pagto_indenizacao,
+            salvado.data_recebimento_docs_nf_entrada, salvado.data_solicitacao_nf_entrada,
+            salvado.data_recebimento_nf_entrada, salvado.n_nf_entrada, salvado.valor_nf_entrada,
+            salvado.data_solicitacao_nf_saida, salvado.data_recebimento_nf_saida,
+            salvado.n_nf_saida, salvado.valor_nf_saida, salvado.data_solicitacao_recorte_chassi,
+            salvado.data_recebimento_recorte_chassi, salvado.data_docs_disponivel_transf_seguradora,
+            salvado.data_recebimento_docs_transf_seguradora, salvado.data_venda_salvado,
+            salvado.valor_venda, salvado.nome_arrematante,
+            salvado.data_docs_disponivel_transf_arrematante,
+            salvado.data_recebimento_docs_transf_arrematante, salvado.doc_transferido_arrematante,
+            salvado.analista_responsavel, salvado.historico, salvado.id
+        ))
+        self.conn.commit()
+
+    def get_salvado_by_id(self, id):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM salvados WHERE id=?', (id,))
+        row = cursor.fetchone()
+        if row:
+            return Salvado(*row)
+        return None
+
+    def get_all_salvados(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM salvados')
+        return [Salvado(*row) for row in cursor.fetchall()]
+
+    def get_columns(self):
+        cursor = self.conn.cursor()
+        cursor.execute('PRAGMA table_info(salvados)')
+        return [col[1] for col in cursor.fetchall() if col[1] != 'id']
+
+    def add_status(self, nome):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT OR IGNORE INTO status_opcoes (nome) VALUES (?)', (nome,))
+        self.conn.commit()
+
+    def delete_status(self, status_id):
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM status_opcoes WHERE id=?', (status_id,))
+        self.conn.commit()
+
+    def update_status(self, status_id, novo_nome):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'UPDATE status_opcoes SET nome=? WHERE id=?', (novo_nome, status_id))
+        self.conn.commit()
+
+    def get_status_opcoes(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT nome FROM status_opcoes')
+        return [row[0] for row in cursor.fetchall()]
+
+    def get_all_status_opcoes(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT * FROM status_opcoes')
+        return cursor.fetchall()
+
+    # Novos métodos para analistas
+    def add_analista(self, nome, email, cargo):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT INTO analistas (nome, email, cargo) VALUES (?, ?, ?)', (nome, email, cargo))
+        self.conn.commit()
+
+    def update_analista(self, analista_id, nome, email, cargo):
+        cursor = self.conn.cursor()
+        cursor.execute('UPDATE analistas SET nome=?, email=?, cargo=? WHERE id=?',
+                       (nome, email, cargo, analista_id))
+        self.conn.commit()
+
+    def delete_analista(self, analista_id):
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM analistas WHERE id=?', (analista_id,))
+        self.conn.commit()
+
+    def get_all_analistas(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT id, nome, email, cargo FROM analistas')
+        return cursor.fetchall()
+
+    def get_analistas_opcoes(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT nome FROM analistas')
+        return [row[0] for row in cursor.fetchall()]
+
+base.html:
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Salvados</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Gestão de Salvados</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('salvado') }}">Adicionar Salvado</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('gerenciar') }}">Gerenciar</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- Removemos o container aqui e deixamos o block content livre -->
+    {% block content %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
+
+index.html:
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4  container mt-4">Lista de Salvados</h2>
+<div class="table-responsive  container mt-4">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Sinistro</th>
+                <th>Placa</th>
+                <th>Analista</th>
+                <th>Data Salvado</th>
+                <th>Ações</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for salvado in salvados %}
+            <tr style="cursor: pointer;" onclick="window.location='{{ url_for('detalhes', id=salvado.id) }}';">
+                <td>{{ salvado.id }}</td>
+                <td>{{ salvado.sinistro }}</td>
+                <td>{{ salvado.placa }}</td>
+                <td>{{ salvado.analista_responsavel }}</td>
+                <td>{{ salvado.data_recebimento_salvado|strftime('%d/%m/%Y') }}</td>
+                <td>
+                    <span class="badge bg-{{ 'success' if salvado.status == 'Finalizado' else 'primary' }}">{{
+                        salvado.status }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('atualizar', id=salvado.id) }}" class="btn btn-sm btn-outline-primary"
+                        onclick="event.stopPropagation();">Atualizar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+gerenciar.html:
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex container-fluid mt-4">
+    <!-- Barra lateral fixa -->
+    <div class="bg-light vh-100 " style="width: 200px; overflow-y: auto; position: fixed;">
+        <h4 class="mt-4 mb-3 ps-3">Gerenciar</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if secao == 'status' %}active{% endif %}"
+                    href="{{ url_for('gerenciar', secao='status') }}">Status</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if secao == 'analistas' %}active{% endif %}"
+                    href="{{ url_for('gerenciar', secao='analistas') }}">Analistas</a>
+            </li>
+            <!-- Adicione mais opções PROMO -->
+        </ul>
+    </div>
+
+    <!-- Área de conteúdo -->
+    <div class="flex-grow-1" style="margin-left: 170px; padding: 20px 60px;">
+        {% if secao == 'status' %}
+        <h2 class="mb-4">Gerenciar Status</h2>
+        <!-- Formulário para adicionar novo status -->
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="h5">Adicionar Novo Status</h3>
+            <form method="POST" class="d-flex gap-2">
+                <input type="hidden" name="acao" value="inserir">
+                <input type="text" class="form-control" name="novo_status" placeholder="Digite o novo status" required>
+                <button type="submit" class="btn btn-success">Adicionar</button>
+            </form>
+        </div>
+        <!-- Lista de status existentes -->
+        <div class="card p-4 shadow-sm">
+            <h3 class="h5 mb-3">Status Existentes</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for status in status_opcoes %}
+                        <tr>
+                            <td>{{ status[0] }}</td>
+                            <td>{{ status[1] }}</td>
+                            <td>
+                                <form method="POST" class="d-flex gap-2">
+                                    <input type="hidden" name="acao" value="alterar">
+                                    <input type="hidden" name="status_id" value="{{ status[0] }}">
+                                    <input type="text" class="form-control" name="novo_nome" value="{{ status[1] }}"
+                                        required>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Alterar</button>
+                                </form>
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="acao" value="excluir">
+                                    <input type="hidden" name="status_id" value="{{ status[0] }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Tem certeza que deseja excluir?');">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% elif secao == 'analistas' %}
+        <h2 class="mb-4">Gerenciar Analistas</h2>
+        <!-- Formulário para adicionar novo analista -->
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="h5">Adicionar Novo Analista</h3>
+            <form method="POST" class="row g-3 align-items-center">
+                <input type="hidden" name="acao" value="inserir">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="nome" placeholder="Nome" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="email" class="form-control" name="email" placeholder="E-mail" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="cargo">
+                        <option value="" selected>Selecione o cargo</option>
+                        <option value="Subscritor">Subscritor</option>
+                        <option value="Gerente">Gerente</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">Adicionar</button>
+                </div>
+            </form>
+        </div>
+        <!-- Lista de analistas existentes -->
+        <div class="card p-4 shadow-sm">
+            <h3 class="h5 mb-3">Analistas Existentes</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Cargo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analista in analistas %}
+                        <tr>
+                            <td>{{ analista[0] }}</td>
+                            <td>{{ analista[1] }}</td>
+                            <td>{{ analista[2] }}</td>
+                            <td>{{ analista[3] if analista[3] else 'Não informado' }}</td>
+                            <td>
+                                <form method="POST" class="row g-2 align-items-center">
+                                    <input type="hidden" name="acao" value="alterar">
+                                    <input type="hidden" name="analista_id" value="{{ analista[0] }}">
+                                    <div class="col">
+                                        <input type="text" class="form-control" name="nome" value="{{ analista[1] }}"
+                                            required>
+                                    </div>
+                                    <div class="col">
+                                        <input type="email" class="form-control" name="email" value="{{ analista[2] }}"
+                                            required>
+                                    </div>
+                                    <div class="col">
+                                        <select class="form-select" name="cargo">
+                                            <option value="" {% if not analista[3] %}selected{% endif %}>Selecione
+                                            </option>
+                                            <option value="Subscritor" {% if analista[3]=='Subscritor' %}selected{%
+                                                endif %}>Subscritor</option>
+                                            <option value="Gerente" {% if analista[3]=='Gerente' %}selected{% endif %}>
+                                                Gerente</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Alterar</button>
+                                    </div>
+                                </form>
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="acao" value="excluir">
+                                    <input type="hidden" name="analista_id" value="{{ analista[0] }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger mt-2"
+                                        onclick="return confirm('Tem certeza que deseja excluir?');">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+salvados_detalhes.html
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4  container mt-4">Detalhes do Salvado</h2>
+<div class="card p-4 shadow-sm  container mt-4">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>Status:</strong> {{ salvado.status }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Sinistro:</strong> {{ salvado.sinistro }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Apólice:</strong> {{ salvado.apolice }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento Salvado:</strong> {{
+            salvado.data_recebimento_salvado|default('')|strftime('%d/%m/%Y') if salvado.data_recebimento_salvado else
+            '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Pedido Cotação Remoção:</strong> {{
+            salvado.data_pedido_cotacao_remocao|default('')|strftime('%d/%m/%Y') if salvado.data_pedido_cotacao_remocao
+            else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Nome Segurado:</strong> {{ salvado.nome_segurado }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Nome Terceiro:</strong> {{ salvado.nome_terceiro }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Placa:</strong> {{ salvado.placa }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Marca:</strong> {{ salvado.marca }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Modelo:</strong> {{ salvado.modelo }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Ano:</strong> {{ salvado.ano }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>N° FIPE:</strong> {{ salvado.n_fipe }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor FIPE:</strong> {{ salvado.valor_fipe|currency if salvado.valor_fipe is not none else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Mês/Ano Ref. FIPE:</strong> {{ salvado.mes_ano_ref_fipe|default('') }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Leiloeiro:</strong> {{ salvado.leiloeiro }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Status Remoção Leiloeiro:</strong> {{ salvado.status_remocao_leiloeiro }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Local Atual Veículo:</strong> {{ salvado.local_atual_veiculo }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Entrada Pátio Leiloeiro:</strong> {{
+            salvado.data_entrada_patio_leiloeiro|default('')|strftime('%d/%m/%Y') if
+            salvado.data_entrada_patio_leiloeiro else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Vistorias Solicitada - Monta:</strong> {{
+            salvado.vistorias_solicitada_monta|default('')|strftime('%d/%m/%Y') if salvado.vistorias_solicitada_monta
+            else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Vistorias Recebidas - Monta:</strong> {{
+            salvado.vistorias_recebidas_monta|default('')|strftime('%d/%m/%Y') if salvado.vistorias_recebidas_monta else
+            '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Vistorias Solicitada - ECV:</strong> {{
+            salvado.vistorias_solicitada_ecv|default('')|strftime('%d/%m/%Y') if salvado.vistorias_solicitada_ecv else
+            '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Vistorias Recebidas - ECV:</strong> {{
+            salvado.vistorias_recebidas_ecv|default('')|strftime('%d/%m/%Y') if salvado.vistorias_recebidas_ecv else ''
+            }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Classificação de Danos:</strong> {{ salvado.classificacao_danos }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>ECV:</strong> {{ salvado.ecv }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor Total da Indenização:</strong> {{ salvado.valor_total_indenizacao|currency if
+            salvado.valor_total_indenizacao is not none else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Franquia - Outros Descontos:</strong> {{ salvado.franquia_outros_descontos|currency if
+            salvado.franquia_outros_descontos is not none else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor Pago pela Cia:</strong> {{ salvado.valor_pago_pela_cia|currency if salvado.valor_pago_pela_cia
+            is not none else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Pagto Indenização:</strong> {{ salvado.data_pagto_indenizacao|default('')|strftime('%d/%m/%Y')
+            if salvado.data_pagto_indenizacao else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento Docs para Emissão NF Entrada:</strong> {{
+            salvado.data_recebimento_docs_nf_entrada|default('')|strftime('%d/%m/%Y') if
+            salvado.data_recebimento_docs_nf_entrada else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Solicitação NF Entrada:</strong> {{
+            salvado.data_solicitacao_nf_entrada|default('')|strftime('%d/%m/%Y') if salvado.data_solicitacao_nf_entrada
+            else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento NF Entrada:</strong> {{
+            salvado.data_recebimento_nf_entrada|default('')|strftime('%d/%m/%Y') if salvado.data_recebimento_nf_entrada
+            else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>N° NF Entrada:</strong> {{ salvado.n_nf_entrada }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor NF Entrada:</strong> {{ salvado.valor_nf_entrada|currency if salvado.valor_nf_entrada is not
+            none else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Solicitação NF Saída:</strong> {{
+            salvado.data_solicitacao_nf_saida|default('')|strftime('%d/%m/%Y') if salvado.data_solicitacao_nf_saida else
+            '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento NF Saída:</strong> {{
+            salvado.data_recebimento_nf_saida|default('')|strftime('%d/%m/%Y') if salvado.data_recebimento_nf_saida else
+            '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>N° NF Saída:</strong> {{ salvado.n_nf_saida }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor NF Saída:</strong> {{ salvado.valor_nf_saida|currency if salvado.valor_nf_saida is not none
+            else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Solicitação Recorte Chassi:</strong> {{
+            salvado.data_solicitacao_recorte_chassi|default('')|strftime('%d/%m/%Y') if
+            salvado.data_solicitacao_recorte_chassi else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento Recorte Chassi:</strong> {{
+            salvado.data_recebimento_recorte_chassi|default('')|strftime('%d/%m/%Y') if
+            salvado.data_recebimento_recorte_chassi else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Docs Disponível Despachante - Transf. Seguradora:</strong> {{
+            salvado.data_docs_disponivel_transf_seguradora|default('')|strftime('%d/%m/%Y') if
+            salvado.data_docs_disponivel_transf_seguradora else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento Docs Despachante - Transf. Seguradora:</strong> {{
+            salvado.data_recebimento_docs_transf_seguradora|default('')|strftime('%d/%m/%Y') if
+            salvado.data_recebimento_docs_transf_seguradora else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Venda do Salvado (Leilão):</strong> {{
+            salvado.data_venda_salvado|default('')|strftime('%d/%m/%Y') if salvado.data_venda_salvado else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Valor da Venda:</strong> {{ salvado.valor_venda|currency if salvado.valor_venda is not none else ''
+            }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Nome Arrematante:</strong> {{ salvado.nome_arrematante }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Docs Disponível Despachante - Transf. Arrematante:</strong> {{
+            salvado.data_docs_disponivel_transf_arrematante|default('')|strftime('%d/%m/%Y') if
+            salvado.data_docs_disponivel_transf_arrematante else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Data Recebimento Docs Despachante - Transf. Arrematante:</strong> {{
+            salvado.data_recebimento_docs_transf_arrematante|default('')|strftime('%d/%m/%Y') if
+            salvado.data_recebimento_docs_transf_arrematante else '' }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Doc Transferido ao Arrematante:</strong> {{ salvado.doc_transferido_arrematante }}
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Analista Responsável:</strong> {{ salvado.analista_responsavel }}
+        </div>
+        <div class="col-md-12 mb-3">
+            <strong>Histórico:</strong>
+            <pre>{{ salvado.historico }}</pre>
+        </div>
+    </div>
+    <div class="mt-3">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
+        <a href="{{ url_for('atualizar', id=salvado.id) }}" class="btn btn-primary">Editar</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateFields = document.querySelectorAll('input[type="date"]');
+        dateFields.forEach(field => {
+            field.addEventListener('change', function () {
+                const value = this.value;
+                if (value) {
+                    const [year, month, day] = value.split('-');
+                    this.value = `${year}-${month}-${day}`; // Mantém o formato ISO para o backend
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+salvados_form.html:
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4  container mt-4">{% if salvado %}Atualizar Salvado{% else %}Adicionar Salvado{% endif %}</h2>
+{% if errors %}
+<div class="alert alert-danger  container mt-4">
+    Preencha os campos obrigatórios! Campos com erro: {{ error_messages|join(', ') }}
+</div>
+{% endif %}
+<div class="card p-4 shadow-sm  container mt-4">
+    <form method="POST"
+        action="{% if salvado %}{{ url_for('atualizar', id=salvado.id) }}{% else %}{{ url_for('salvado') }}{% endif %}"
+        id="salvadoForm">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select {% if errors.status %}is-invalid{% endif %}" name="status">
+                    <option value="" {% if not salvado and not form_data.status %}selected{% endif %}>Selecione</option>
+                    {% for status in status_opcoes %}
+                    <option value="{{ status }}" {% if (salvado and salvado.status==status) or (form_data and
+                        form_data.status==status) %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Sinistro</label>
+                <input type="text" class="form-control {% if errors.sinistro %}is-invalid{% endif %}" name="sinistro"
+                    value="{{ salvado.sinistro if salvado else form_data.sinistro if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Apólice</label>
+                <input type="text" class="form-control {% if errors.apolice %}is-invalid{% endif %}" name="apolice"
+                    value="{{ salvado.apolice if salvado else form_data.apolice if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento Salvado</label>
+                <input type="date" class="form-control {% if errors.data_recebimento_salvado %}is-invalid{% endif %}"
+                    name="data_recebimento_salvado"
+                    value="{{ salvado.data_recebimento_salvado if salvado else form_data.data_recebimento_salvado if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Pedido Cotação Remoção</label>
+                <input type="date" class="form-control {% if errors.data_pedido_cotacao_remocao %}is-invalid{% endif %}"
+                    name="data_pedido_cotacao_remocao"
+                    value="{{ salvado.data_pedido_cotacao_remocao if salvado else form_data.data_pedido_cotacao_remocao if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nome Segurado</label>
+                <input type="text" class="form-control {% if errors.nome_segurado %}is-invalid{% endif %}"
+                    name="nome_segurado"
+                    value="{{ salvado.nome_segurado if salvado else form_data.nome_segurado if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nome Terceiro</label>
+                <input type="text" class="form-control {% if errors.nome_terceiro %}is-invalid{% endif %}"
+                    name="nome_terceiro"
+                    value="{{ salvado.nome_terceiro if salvado else form_data.nome_terceiro if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Placa</label>
+                <input type="text" class="form-control {% if errors.placa %}is-invalid{% endif %}" name="placa"
+                    value="{{ salvado.placa if salvado else form_data.placa if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Marca</label>
+                <input type="text" class="form-control {% if errors.marca %}is-invalid{% endif %}" name="marca"
+                    value="{{ salvado.marca if salvado else form_data.marca if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Modelo</label>
+                <input type="text" class="form-control {% if errors.modelo %}is-invalid{% endif %}" name="modelo"
+                    value="{{ salvado.modelo if salvado else form_data.modelo if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Ano/Modelo</label>
+                <input type="text" class="form-control {% if errors.ano %}is-invalid{% endif %}" name="ano"
+                    value="{{ salvado.ano if salvado else form_data.ano if form_data else '' }}"
+                    placeholder="aaaa/aaaa">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">N° FIPE</label>
+                <input type="text" class="form-control" name="n_fipe"
+                    value="{{ salvado.n_fipe if salvado else form_data.n_fipe if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor FIPE</label>
+                <input type="text" class="form-control currency" name="valor_fipe"
+                    value="{{ salvado.valor_fipe|currency if salvado and salvado.valor_fipe is not none else form_data.valor_fipe if form_data and form_data.valor_fipe else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Mês/Ano Ref. FIPE</label>
+                <input type="text" class="form-control" name="mes_ano_ref_fipe"
+                    value="{{ salvado.mes_ano_ref_fipe if salvado else form_data.mes_ano_ref_fipe if form_data else '' }}"
+                    placeholder="mm/aaaa">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Leiloeiro</label>
+                <input type="text" class="form-control" name="leiloeiro"
+                    value="{{ salvado.leiloeiro if salvado else form_data.leiloeiro if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Status Remoção Leiloeiro</label>
+                <input type="text" class="form-control" name="status_remocao_leiloeiro"
+                    value="{{ salvado.status_remocao_leiloeiro if salvado else form_data.status_remocao_leiloeiro if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Local Atual Veículo</label>
+                <input type="text" class="form-control" name="local_atual_veiculo"
+                    value="{{ salvado.local_atual_veiculo if salvado else form_data.local_atual_veiculo if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Entrada Pátio Leiloeiro</label>
+                <input type="date" class="form-control" name="data_entrada_patio_leiloeiro"
+                    value="{{ salvado.data_entrada_patio_leiloeiro if salvado else form_data.data_entrada_patio_leiloeiro if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Vistorias Solicitada - Monta</label>
+                <input type="date" class="form-control" name="vistorias_solicitada_monta"
+                    value="{{ salvado.vistorias_solicitada_monta if salvado else form_data.vistorias_solicitada_monta if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Vistorias Recebidas - Monta</label>
+                <input type="date" class="form-control" name="vistorias_recebidas_monta"
+                    value="{{ salvado.vistorias_recebidas_monta if salvado else form_data.vistorias_recebidas_monta if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Vistorias Solicitada - ECV</label>
+                <input type="date" class="form-control" name="vistorias_solicitada_ecv"
+                    value="{{ salvado.vistorias_solicitada_ecv if salvado else form_data.vistorias_solicitada_ecv if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Vistorias Recebidas - ECV</label>
+                <input type="date" class="form-control" name="vistorias_recebidas_ecv"
+                    value="{{ salvado.vistorias_recebidas_ecv if salvado else form_data.vistorias_recebidas_ecv if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Classificação de Danos</label>
+                <input type="text" class="form-control" name="classificacao_danos"
+                    value="{{ salvado.classificacao_danos if salvado else form_data.classificacao_danos if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">ECV</label>
+                <input type="text" class="form-control" name="ecv"
+                    value="{{ salvado.ecv if salvado else form_data.ecv if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor Total da Indenização</label>
+                <input type="text" class="form-control currency" name="valor_total_indenizacao"
+                    value="{{ salvado.valor_total_indenizacao|currency if salvado and salvado.valor_total_indenizacao is not none else form_data.valor_total_indenizacao if form_data and form_data.valor_total_indenizacao else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Franquia - Outros Descontos</label>
+                <input type="text" class="form-control currency" name="franquia_outros_descontos"
+                    value="{{ salvado.franquia_outros_descontos|currency if salvado and salvado.franquia_outros_descontos is not none else form_data.franquia_outros_descontos if form_data and form_data.franquia_outros_descontos else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor Pago pela Cia</label>
+                <input type="text" class="form-control currency" name="valor_pago_pela_cia"
+                    value="{{ salvado.valor_pago_pela_cia|currency if salvado and salvado.valor_pago_pela_cia is not none else form_data.valor_pago_pela_cia if form_data and form_data.valor_pago_pela_cia else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Pagto Indenização</label>
+                <input type="date" class="form-control" name="data_pagto_indenizacao"
+                    value="{{ salvado.data_pagto_indenizacao if salvado else form_data.data_pagto_indenizacao if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento Docs para Emissão NF Entrada</label>
+                <input type="date" class="form-control" name="data_recebimento_docs_nf_entrada"
+                    value="{{ salvado.data_recebimento_docs_nf_entrada if salvado else form_data.data_recebimento_docs_nf_entrada if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Solicitação NF Entrada</label>
+                <input type="date" class="form-control" name="data_solicitacao_nf_entrada"
+                    value="{{ salvado.data_solicitacao_nf_entrada if salvado else form_data.data_solicitacao_nf_entrada if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento NF Entrada</label>
+                <input type="date" class="form-control" name="data_recebimento_nf_entrada"
+                    value="{{ salvado.data_recebimento_nf_entrada if salvado else form_data.data_recebimento_nf_entrada if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">N° NF Entrada</label>
+                <input type="text" class="form-control" name="n_nf_entrada"
+                    value="{{ salvado.n_nf_entrada if salvado else form_data.n_nf_entrada if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor NF Entrada</label>
+                <input type="text" class="form-control currency" name="valor_nf_entrada"
+                    value="{{ salvado.valor_nf_entrada|currency if salvado and salvado.valor_nf_entrada is not none else form_data.valor_nf_entrada if form_data and form_data.valor_nf_entrada else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Solicitação NF Saída</label>
+                <input type="date" class="form-control" name="data_solicitacao_nf_saida"
+                    value="{{ salvado.data_solicitacao_nf_saida if salvado else form_data.data_solicitacao_nf_saida if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento NF Saída</label>
+                <input type="date" class="form-control" name="data_recebimento_nf_saida"
+                    value="{{ salvado.data_recebimento_nf_saida if salvado else form_data.data_recebimento_nf_saida if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">N° NF Saída</label>
+                <input type="text" class="form-control" name="n_nf_saida"
+                    value="{{ salvado.n_nf_saida if salvado else form_data.n_nf_saida if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor NF Saída</label>
+                <input type="text" class="form-control currency" name="valor_nf_saida"
+                    value="{{ salvado.valor_nf_saida|currency if salvado and salvado.valor_nf_saida is not none else form_data.valor_nf_saida if form_data and form_data.valor_nf_saida else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Solicitação Recorte Chassi</label>
+                <input type="date" class="form-control" name="data_solicitacao_recorte_chassi"
+                    value="{{ salvado.data_solicitacao_recorte_chassi if salvado else form_data.data_solicitacao_recorte_chassi if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento Recorte Chassi</label>
+                <input type="date" class="form-control" name="data_recebimento_recorte_chassi"
+                    value="{{ salvado.data_recebimento_recorte_chassi if salvado else form_data.data_recebimento_recorte_chassi if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Docs Disponível Despachante - Transf. Seguradora</label>
+                <input type="date" class="form-control" name="data_docs_disponivel_transf_seguradora"
+                    value="{{ salvado.data_docs_disponivel_transf_seguradora if salvado else form_data.data_docs_disponivel_transf_seguradora if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento Docs Despachante - Transf. Seguradora</label>
+                <input type="date" class="form-control" name="data_recebimento_docs_transf_seguradora"
+                    value="{{ salvado.data_recebimento_docs_transf_seguradora if salvado else form_data.data_recebimento_docs_transf_seguradora if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Venda do Salvado (Leilão)</label>
+                <input type="date" class="form-control" name="data_venda_salvado"
+                    value="{{ salvado.data_venda_salvado if salvado else form_data.data_venda_salvado if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor da Venda</label>
+                <input type="text" class="form-control currency" name="valor_venda"
+                    value="{{ salvado.valor_venda|currency if salvado and salvado.valor_venda is not none else form_data.valor_venda if form_data and form_data.valor_venda else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nome Arrematante</label>
+                <input type="text" class="form-control" name="nome_arrematante"
+                    value="{{ salvado.nome_arrematante if salvado else form_data.nome_arrematante if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Docs Disponível Despachante - Transf. Arrematante</label>
+                <input type="date" class="form-control" name="data_docs_disponivel_transf_arrematante"
+                    value="{{ salvado.data_docs_disponivel_transf_arrematante if salvado else form_data.data_docs_disponivel_transf_arrematante if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Recebimento Docs Despachante - Transf. Arrematante</label>
+                <input type="date" class="form-control" name="data_recebimento_docs_transf_arrematante"
+                    value="{{ salvado.data_recebimento_docs_transf_arrematante if salvado else form_data.data_recebimento_docs_transf_arrematante if form_data else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Doc Transferido ao Arrematante?</label>
+                <select class="form-select" name="doc_transferido_arrematante">
+                    <option value="" {% if (not salvado and not form_data.doc_transferido_arrematante) or (salvado and
+                        salvado.doc_transferido_arrematante=='' ) or (form_data and
+                        form_data.doc_transferido_arrematante=='' ) %}selected{% endif %}>Selecione</option>
+                    <option value="Sim" {% if (salvado and salvado.doc_transferido_arrematante=='Sim' ) or (form_data
+                        and form_data.doc_transferido_arrematante=='Sim' ) %}selected{% endif %}>Sim</option>
+                    <option value="Não" {% if (salvado and salvado.doc_transferido_arrematante=='Não' ) or (form_data
+                        and form_data.doc_transferido_arrematante=='Não' ) %}selected{% endif %}>Não</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Analista Responsável</label>
+                <input type="text" class="form-control" name="analista_responsavel"
+                    value="{{ salvado.analista_responsavel if salvado else form_data.analista_responsavel if form_data else '' }}">
+            </div>
+            <div class="col-md-12 mb-3">
+                <label class="form-label">Histórico</label>
+                <textarea class="form-control" name="historico"
+                    rows="3">{{ salvado.historico if salvado else form_data.historico if form_data else '' }}</textarea>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Formatação de campos monetários
+        const currencyFields = document.querySelectorAll('.currency');
+
+        currencyFields.forEach(field => {
+            // Formatar valor inicial, se existir
+            if (field.value && field.value !== 'None') {
+                field.value = formatCurrency(field.value);
+            } else {
+                field.value = ''; // Limpa o campo se for 'None' ou vazio
+            }
+
+            // Formatar enquanto digita
+            field.addEventListener('input', function () {
+                let value = this.value.replace(/[^\d]/g, ''); // Remove tudo exceto números
+                if (value) {
+                    this.value = formatCurrency(value);
+                } else {
+                    this.value = '';
+                }
+            });
+
+            // Garantir formatação ao perder foco
+            field.addEventListener('blur', function () {
+                let value = this.value.replace(/[^\d]/g, '');
+                this.value = value ? formatCurrency(value) : '';
+            });
+        });
+
+        // Função para formatar como moeda brasileira
+        function formatCurrency(value) {
+            if (!value) return '';
+            let number = parseFloat(value.replace(/[^\d]/g, '')) / 100; // Divide por 100 para tratar centavos
+            if (isNaN(number)) return '';
+            return number.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+
+        // Antes de enviar o formulário, converter para valor numérico puro
+        document.getElementById('salvadoForm').addEventListener('submit', function (e) {
+            currencyFields.forEach(field => {
+                let value = field.value.replace(/[^\d]/g, '');
+                field.value = value ? (parseFloat(value) / 100).toString() : '';
+            });
+        });
+
+        // Formatação de campos de data
+        const dateFields = document.querySelectorAll('input[type="date"]');
+        dateFields.forEach(field => {
+            field.addEventListener('change', function () {
+                const value = this.value;
+                if (value) {
+                    const [year, month, day] = value.split('-');
+                    this.value = `${year}-${month}-${day}`; // Mantém o formato ISO para o backend
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+style.css:
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-outline-primary {
+    transition: all 0.3s;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+.badge {
+    padding: 0.5em 1em;
+    font-size: 0.9em;
+}
+
+.table-hover tbody tr {
+    cursor: pointer;
+}
+
+/* Estilo para campos inválidos */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545 !important;
+    background-image: none;
+}
+
+/* Estilo para a barra lateral */
+.bg-light {
+    border-right: 1px solid #dee2e6;
+}
+
+.nav-link {
+    color: #333;
+    padding: 10px 20px;
+}
+
+.nav-link:hover {
+    background-color: #e9ecef;
+    color: #007bff;
+}
+
+.nav-link.active {
+    background-color: #007bff;
+    color: white !important;
+}
+
+/* Ajuste para evitar sobreposição */
+body {
+    overflow-x: hidden;
+}
+
+/* Estilo para os links da navbar */
+.navbar-dark .navbar-nav .nav-link {
+    color: #fff;
+    /* Cor branca, igual ao "Gestão de Salvados" */
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+    color: #333;
+    /* Tom claro de azul para hover, para contraste */
+}

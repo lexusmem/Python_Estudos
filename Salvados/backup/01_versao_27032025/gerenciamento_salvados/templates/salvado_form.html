@@ -266,16 +266,8 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Analista Responsável</label>
-                <select class="form-select" name="analista_responsavel">
-                    <option value="" {% if (not salvado and not form_data.analista_responsavel) or (salvado and
-                        salvado.analista_responsavel=='' ) or (form_data and form_data.analista_responsavel=='' )
-                        %}selected{% endif %}>Selecione</option>
-                    {% for analista in analistas_opcoes %}
-                    <option value="{{ analista }}" {% if (salvado and salvado.analista_responsavel==analista) or
-                        (form_data and form_data.analista_responsavel==analista) %}selected{% endif %}>{{ analista }}
-                    </option>
-                    {% endfor %}
-                </select>
+                <input type="text" class="form-control" name="analista_responsavel"
+                    value="{{ salvado.analista_responsavel if salvado else form_data.analista_responsavel if form_data else '' }}">
             </div>
             <div class="col-md-12 mb-3">
                 <label class="form-label">Histórico</label>

@@ -20,7 +20,7 @@ FIELD_NAMES = {
     'ano': 'Ano'
 }
 
-# Filtros personalizados (mantidos como estão)
+# Filtro personalizado para formatar datas no Jinja2
 
 
 def strftime_filter(value, format_string):
@@ -29,9 +29,11 @@ def strftime_filter(value, format_string):
             try:
                 value = datetime.strptime(value, '%Y-%m-%d')
             except ValueError:
-                return value
+                return value  # Retorna o valor original se não for uma data válida
         return value.strftime(format_string)
     return ''
+
+# Filtro personalizado para formatar valores monetários
 
 
 def currency_filter(value):
@@ -41,9 +43,10 @@ def currency_filter(value):
         value = float(value)
         return f"R$ {value:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',')
     except (ValueError, TypeError):
-        return value
+        return value  # Retorna o valor original se não for numérico
 
 
+# Registrar os filtros no Jinja2
 app.jinja_env.filters['strftime'] = strftime_filter
 app.jinja_env.filters['currency'] = currency_filter
 
@@ -69,9 +72,7 @@ def salvado():
             if not form_data[field] or form_data[field].strip() == '':
                 errors[field] = True
         if not errors:
-            # Converte campos monetários para float
-            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia',
-                        'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
                 value = form_data[key].strip()
                 if value and value.lower() != 'none':
                     try:
@@ -80,15 +81,12 @@ def salvado():
                         form_data[key] = None
                 else:
                     form_data[key] = None
-            # Cria o objeto Salvado e salva no banco
             salvado = Salvado(**form_data)
             db.add_salvado(salvado)
             return redirect(url_for('index'))
         error_messages = [FIELD_NAMES[field] for field in errors.keys()]
-        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                               salvado=None, form_data=form_data, errors=errors, error_messages=error_messages)
-    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                           salvado=None, form_data=form_data, errors=errors, error_messages=[])
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=None, form_data=form_data, errors=errors, error_messages=[])
 
 
 @app.route('/atualizar/<int:id>', methods=['GET', 'POST'])
@@ -106,9 +104,7 @@ def atualizar(id):
             if not salvado_data[field] or salvado_data[field].strip() == '':
                 errors[field] = True
         if not errors:
-            # Converte campos monetários para float
-            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia',
-                        'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
+            for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia', 'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
                 value = salvado_data[key].strip()
                 if value and value.lower() != 'none':
                     try:
@@ -117,15 +113,12 @@ def atualizar(id):
                         salvado_data[key] = None
                 else:
                     salvado_data[key] = None
-            # Atualiza o objeto Salvado com o ID existente
             salvado = Salvado(id=id, **salvado_data)
             db.update_salvado(salvado)
             return redirect(url_for('index'))
         error_messages = [FIELD_NAMES[field] for field in errors.keys()]
-        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                               salvado=salvado, form_data=salvado_data, errors=errors, error_messages=error_messages)
-    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                           salvado=salvado, form_data={}, errors=errors, error_messages=[])
+        return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=salvado, form_data=salvado_data, errors=errors, error_messages=error_messages)
+    return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes, salvado=salvado, form_data={}, errors=errors, error_messages=[])
 
 
 @app.route('/detalhes/<int:id>')
@@ -138,6 +131,7 @@ def detalhes(id):
 
 @app.route('/gerenciar', methods=['GET', 'POST'])
 def gerenciar():
+    # Padrão: "status" se não houver parâmetro
     secao = request.args.get('secao', 'status')
     if request.method == 'POST':
         acao = request.form['acao']
