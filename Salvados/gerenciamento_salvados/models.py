@@ -144,6 +144,16 @@ class Database:
                 cargo TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS leiloeiros (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                endereco TEXT,
+                telefone TEXT,
+                responsavel TEXT,
+                email TEXT
+            )
+        ''')
         self.conn.commit()
 
     def add_salvado(self, salvado):
@@ -302,4 +312,32 @@ class Database:
     def get_analistas_opcoes(self):
         cursor = self.conn.cursor()
         cursor.execute('SELECT nome FROM analistas')
+        return [row[0] for row in cursor.fetchall()]
+
+    def add_leiloeiro(self, nome, endereco, telefone, responsavel, email):
+        cursor = self.conn.cursor()
+        cursor.execute('INSERT INTO leiloeiros (nome, endereco, telefone, responsavel, email) VALUES (?, ?, ?, ?, ?)',
+                       (nome, endereco, telefone, responsavel, email))
+        self.conn.commit()
+
+    def update_leiloeiro(self, leiloeiro_id, nome, endereco, telefone, responsavel, email):
+        cursor = self.conn.cursor()
+        cursor.execute('UPDATE leiloeiros SET nome=?, endereco=?, telefone=?, responsavel=?, email=? WHERE id=?',
+                       (nome, endereco, telefone, responsavel, email, leiloeiro_id))
+        self.conn.commit()
+
+    def delete_leiloeiro(self, leiloeiro_id):
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM leiloeiros WHERE id=?', (leiloeiro_id,))
+        self.conn.commit()
+
+    def get_all_leiloeiros(self):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'SELECT id, nome, endereco, telefone, responsavel, email FROM leiloeiros')
+        return cursor.fetchall()
+
+    def get_leiloeiros_opcoes(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT nome FROM leiloeiros')
         return [row[0] for row in cursor.fetchall()]

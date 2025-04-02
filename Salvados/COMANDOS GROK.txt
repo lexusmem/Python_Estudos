@@ -72,12 +72,13 @@ os analistas inseridos aqui deve estar na lista do campo "Analista Responsável"
 - na pagina de adicionar salvado no campo analista responsavel deve ser carregado a lista de analistas e uma opção em branco.
 - AJUSTAR CAMPO ANALISTA NO CADASTRAR OU ATUALIZAR SALVADO
 
-
-implementar:
 - implementar leiloeiro (lista de leiloeiros) na pagina gerenciar - aqui deve ter a posibilidade de incluir dados cadastrais do leiloeiro (nome endereço telefone responsavel e-mail)
  na pagina de adicionar salvado no campo Leiloeiro deve ser carregado a lista de leiloeiros e uma opção em branco.
  deve ser vinculado no salvado e ter registro atraves do banco de dados
 
+implementar:
+
+- na aba lateral de gerenciar onde consta status, analista e leiloeiro deve ser fixa ao rolar a pagina para baixo
 - pagina para controlar e lançar despesas pagas nos salvados, na pagina deve ter opção de lançar as despesas (fornecedor/data/tipo de despesas/valor/observação) e deve ter a lista das despesas lançadas, as despesas são vinculadas aos salvados, nesta pagina deve ser possivel pesquisar as despesas por placa/sinistro/apólice/segurado/fornecedor e deve ter resumo do total das despesas pagas
 - na pagina de detalhe do salvado incluir botão para lançar as despesas
 - na pagina de detalhe do salvado incluir valor sugestão de venda (este valor deve ser o valor médio com base no valor de venda com valor da fipe das últimas 10 vendas de acordo com o tipo da monta)

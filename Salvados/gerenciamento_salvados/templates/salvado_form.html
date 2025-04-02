@@ -94,8 +94,15 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Leiloeiro</label>
-                <input type="text" class="form-control" name="leiloeiro"
-                    value="{{ salvado.leiloeiro if salvado else form_data.leiloeiro if form_data else '' }}">
+                <select class="form-select" name="leiloeiro">
+                    <option value="" {% if (not salvado and not form_data.leiloeiro) or (salvado and
+                        salvado.leiloeiro=='' ) or (form_data and form_data.leiloeiro=='' ) %}selected{% endif %}>
+                        Selecione</option>
+                    {% for leiloeiro in leiloeiros_opcoes %}
+                    <option value="{{ leiloeiro }}" {% if (salvado and salvado.leiloeiro==leiloeiro) or (form_data and
+                        form_data.leiloeiro==leiloeiro) %}selected{% endif %}>{{ leiloeiro }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Status Remoção Leiloeiro</label>

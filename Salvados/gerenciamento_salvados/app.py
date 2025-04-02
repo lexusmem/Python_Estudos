@@ -5,7 +5,6 @@ from datetime import datetime
 app = Flask(__name__)
 db = Database()
 
-# Mapeamento de nomes técnicos para nomes amigáveis
 FIELD_NAMES = {
     'status': 'Status',
     'sinistro': 'Sinistro',
@@ -19,8 +18,6 @@ FIELD_NAMES = {
     'modelo': 'Modelo',
     'ano': 'Ano'
 }
-
-# Filtros personalizados (mantidos como estão)
 
 
 def strftime_filter(value, format_string):
@@ -58,6 +55,7 @@ def index():
 def salvado():
     status_opcoes = db.get_status_opcoes()
     analistas_opcoes = db.get_analistas_opcoes()
+    leiloeiros_opcoes = db.get_leiloeiros_opcoes()
     errors = {}
     form_data = {}
     if request.method == 'POST':
@@ -69,7 +67,6 @@ def salvado():
             if not form_data[field] or form_data[field].strip() == '':
                 errors[field] = True
         if not errors:
-            # Converte campos monetários para float
             for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia',
                         'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
                 value = form_data[key].strip()
@@ -80,21 +77,23 @@ def salvado():
                         form_data[key] = None
                 else:
                     form_data[key] = None
-            # Cria o objeto Salvado e salva no banco
             salvado = Salvado(**form_data)
             db.add_salvado(salvado)
             return redirect(url_for('index'))
         error_messages = [FIELD_NAMES[field] for field in errors.keys()]
         return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                               salvado=None, form_data=form_data, errors=errors, error_messages=error_messages)
+                               leiloeiros_opcoes=leiloeiros_opcoes, salvado=None, form_data=form_data, errors=errors,
+                               error_messages=error_messages)
     return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                           salvado=None, form_data=form_data, errors=errors, error_messages=[])
+                           leiloeiros_opcoes=leiloeiros_opcoes, salvado=None, form_data=form_data, errors=errors,
+                           error_messages=[])
 
 
 @app.route('/atualizar/<int:id>', methods=['GET', 'POST'])
 def atualizar(id):
     status_opcoes = db.get_status_opcoes()
     analistas_opcoes = db.get_analistas_opcoes()
+    leiloeiros_opcoes = db.get_leiloeiros_opcoes()
     salvado = db.get_salvado_by_id(id)
     errors = {}
     if request.method == 'POST':
@@ -106,7 +105,6 @@ def atualizar(id):
             if not salvado_data[field] or salvado_data[field].strip() == '':
                 errors[field] = True
         if not errors:
-            # Converte campos monetários para float
             for key in ['valor_fipe', 'valor_total_indenizacao', 'franquia_outros_descontos', 'valor_pago_pela_cia',
                         'valor_nf_entrada', 'valor_nf_saida', 'valor_venda']:
                 value = salvado_data[key].strip()
@@ -117,15 +115,16 @@ def atualizar(id):
                         salvado_data[key] = None
                 else:
                     salvado_data[key] = None
-            # Atualiza o objeto Salvado com o ID existente
             salvado = Salvado(id=id, **salvado_data)
             db.update_salvado(salvado)
             return redirect(url_for('index'))
         error_messages = [FIELD_NAMES[field] for field in errors.keys()]
         return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                               salvado=salvado, form_data=salvado_data, errors=errors, error_messages=error_messages)
+                               leiloeiros_opcoes=leiloeiros_opcoes, salvado=salvado, form_data=salvado_data,
+                               errors=errors, error_messages=error_messages)
     return render_template('salvado_form.html', status_opcoes=status_opcoes, analistas_opcoes=analistas_opcoes,
-                           salvado=salvado, form_data={}, errors=errors, error_messages=[])
+                           leiloeiros_opcoes=leiloeiros_opcoes, salvado=salvado, form_data={}, errors=errors,
+                           error_messages=[])
 
 
 @app.route('/detalhes/<int:id>')
@@ -156,11 +155,22 @@ def gerenciar():
             elif acao == 'excluir':
                 db.delete_analista(request.form['analista_id'])
             elif acao == 'alterar':
-                db.update_analista(
-                    request.form['analista_id'], request.form['nome'], request.form['email'], request.form['cargo'])
+                db.update_analista(request.form['analista_id'], request.form['nome'], request.form['email'],
+                                   request.form['cargo'])
+        elif secao == 'leiloeiros':
+            if acao == 'inserir':
+                db.add_leiloeiro(request.form['nome'], request.form['endereco'], request.form['telefone'],
+                                 request.form['responsavel'], request.form['email'])
+            elif acao == 'excluir':
+                db.delete_leiloeiro(request.form['leiloeiro_id'])
+            elif acao == 'alterar':
+                db.update_leiloeiro(request.form['leiloeiro_id'], request.form['nome'], request.form['endereco'],
+                                    request.form['telefone'], request.form['responsavel'], request.form['email'])
     status_opcoes = db.get_all_status_opcoes()
     analistas = db.get_all_analistas()
-    return render_template('gerenciar.html', status_opcoes=status_opcoes, analistas=analistas, secao=secao)
+    leiloeiros = db.get_all_leiloeiros()
+    return render_template('gerenciar.html', status_opcoes=status_opcoes, analistas=analistas,
+                           leiloeiros=leiloeiros, secao=secao)
 
 
 if __name__ == '__main__':
